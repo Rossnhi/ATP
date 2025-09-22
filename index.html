@@ -11,13 +11,28 @@
 </head>
 <body>
     <h1>Q.E.D <span id="halmos">&#9622</span></h1>
-    <div id="promptContainer">
-        <textarea name="" id="premises" class="promptChildren" placeholder="Enter premises..."></textarea>
-        <textarea name="" id="conclusion" class="promptChildren" placeholder="Enter conclusion..."></textarea>
-    </div>
-    <button id="proveButton">Prove</button>
-    <div id="proofWindow">
-        <h2 id="proofTitle">Proof :</h2>
+    <div id="tabs">
+        <div id="tabBar">
+            <div id="verifyBar" class="tabHead">
+                Verify
+            </div>
+            <div id="proveBar" class="tabHead selectedTab">
+                Prove
+            </div>
+        </div>
+        <div class="tab" id="verifyTab">
+            <textarea name="" id="proofInp" placeholder="Type proof..."></textarea>
+        </div>
+        <div class="tab" id="proveTab">
+            <div id="promptContainer">
+                <textarea name="" id="premises" class="promptChildren" placeholder="Enter premises..."></textarea>
+                <textarea name="" id="conclusion" class="promptChildren" placeholder="Enter conclusion..."></textarea>
+            </div>
+            <button id="proveButton">Prove</button>
+            <div id="proofWindow">
+                <h2 id="proofTitle">Proof :</h2>
+            </div>
+        </div>
     </div>
 </body>
 <script src="scripts/AST.js"></script>

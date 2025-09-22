@@ -1,5 +1,32 @@
 let data = window.appData = {};
 
+let verifyBarHead = document.getElementById("verifyBar");
+let proveBarHead = document.getElementById("proveBar");
+verifyBarHead.addEventListener("click", handleTabClick);
+proveBarHead.addEventListener("click", handleTabClick);
+
+function handleTabClick(e) {
+  const clickedTab = e.srcElement;
+  if (clickedTab == verifyBarHead) {
+    clickedTab.className = "tabHead selectedTab";
+    proveBarHead.className = "tabHead";
+    document.getElementById("verifyTab").style.display = "block";
+    document.getElementById("proveTab").style.display = "none";
+  }
+  else {
+    clickedTab.className = "tabHead selectedTab";
+    verifyBarHead.className = "tabHead";
+    document.getElementById("verifyTab").style.display = "none";
+    document.getElementById("proveTab").style.display = "block";
+  }
+}
+// Verify Tab
+let proofInpText = document.getElementById("proofInp");
+proofInpText.addEventListener("input", handleOperators);
+
+
+// Prove Tab
+
 let premisesText = document.getElementById("premises");
 premisesText.addEventListener("input", handleOperators);
 
