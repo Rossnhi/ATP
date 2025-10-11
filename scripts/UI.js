@@ -35,13 +35,16 @@ conclusionText.addEventListener("input", handleOperators);
 
 function handleOperators(e) {
   e.target.value = e.target.value
-  .replace(/~|&|\||<=>|=>|<= /g, m => ({
+  .replace(/~|&|\||<=>|=>|<=|\\in|\\all|\\exists/g, m => ({
     "~": "\u00AC",
     "&": "\u2227",
     "|": "\u2228",
     "<=>": "\u27FA",
     "=>": "\u27F9",
-    "<= ": "\u27F8 "
+    "<= ": "\u27F8 ",
+    "\\in" : "\u2208",
+    "\\all" : "\u2200",
+    "\\exists" : "\u2203"
   }[m]));
 }
 
@@ -57,4 +60,7 @@ function handleProve() {
   let conclusionsAST = conclusionText.value.trim() != '' ?  parse(tokenize(conclusionText.value)) : null;
   data.premisesAST = premisesAST;
   data.conclusionsAST = conclusionsAST;
+
+  prove();
+  displayProof();
 }
