@@ -29,7 +29,7 @@ textarea {
     color: var(--accent-color);
 }
 
-#promptContainer {
+.promptContainer {
     display: flex;
     flex-direction: row;
     gap: 3px;
@@ -50,7 +50,7 @@ textarea {
     text-align: center;
 }
 
-#proveButton {
+button {
     background-color: var(--accent-color);
     color: rgb(26, 26, 26);
     border: 1px solid var(--accent-color);
@@ -118,8 +118,19 @@ textarea {
     color: rgb(26, 26, 26);
 }
 
+#proofSystem {
+    background-color: var(--bg-color);
+    padding: 5px 20px;
+    margin-left: auto;
+    margin-right: 5px;
+}
+
+#proofSystem:focus {
+    outline: none;
+}
+
 #proofInp {
-    min-height: 500px;
+    min-height: 600px;
     width: 100%;
     background-color: var(--bg-color);
     border-radius: 5px;
@@ -127,4 +138,8 @@ textarea {
     outline: none;
     text-align: left;
     resize: none;
+}
+
+#proof {
+    padding: 0px 30px 0px 30px;
 }

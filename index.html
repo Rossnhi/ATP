@@ -19,18 +19,31 @@
             <div id="proveBar" class="tabHead selectedTab">
                 Prove
             </div>
+            <select id="proofSystem">
+                <option value="ND">Natural Deduction</option>
+                <option value="Resolution">Resolution</option>
+                <option value="Tableux">Tableux</option>
+            </select>
         </div>
         <div class="tab" id="verifyTab">
+            <div class="promptContainer">
+                <textarea name="" id="verifyPremises" class="promptChildren" placeholder="Enter premises..."></textarea>
+                <textarea name="" id="verifyConclusion" class="promptChildren" placeholder="Enter conclusion..."></textarea>
+            </div>
+            <button id="verifyButton">Verify</button>
             <textarea name="" id="proofInp" placeholder="Type proof..."></textarea>
         </div>
         <div class="tab" id="proveTab">
-            <div id="promptContainer">
+            <div class="promptContainer">
                 <textarea name="" id="premises" class="promptChildren" placeholder="Enter premises..."></textarea>
                 <textarea name="" id="conclusion" class="promptChildren" placeholder="Enter conclusion..."></textarea>
             </div>
             <button id="proveButton">Prove</button>
             <div id="proofWindow">
                 <h2 id="proofTitle">Proof :</h2>
+                <ul id="proof">
+
+                </ul>
             </div>
         </div>
     </div>
@@ -38,4 +51,5 @@
 <script src="scripts/AST.js"></script>
 <script src="scripts/AxiomSchema.js"></script>
 <script src="scripts/UI.js"></script>
+<script src="scripts/ND.js"></script>
 </html>
