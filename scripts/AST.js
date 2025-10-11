@@ -181,7 +181,6 @@ function parse(tokens) {
     }
 
     function parsePrimary() {
-        let expr = peek();
         if (peek() == '(') {
             consume();
             let expr = parseIff();
@@ -194,8 +193,65 @@ function parse(tokens) {
                 throw new Error('Propositional Syntax Error: ' + tokens.slice(i));
             }
         }
-        if (typeof expr == "string") {
-            return new Var(consume());
+        return new Var(consume());
+    }
+}
+
+function getPrecedence(type) {
+    switch (type) {
+        case "iff": return 1;
+        case "implies": return 2;
+        case "or": return 3;
+        case "and": return 4;
+        case "not": return 5;
+        case "var": return 6;
+        default: return 0;
+    }
+}
+
+function ASTtoStr(formula, parentPrecedence = 0) {
+    if (formula.type == "var") {
+        return formula.name;
+    }
+    if (formula.type == "not") {
+        if (getPrecedence(formula.expr.type) < getPrecedence("not")) {
+            return "¬(" + ASTtoStr(formula.expr) + ")";
         }
+        return "¬" + ASTtoStr(formula.expr);
+    }
+    if (formula.type == "and" || formula.type == "or" || formula.type == "implies" || formula.type == "iff") {
+        const prec = getPrecedence(formula.type);
+        let leftStr = ASTtoStr(formula.left, prec);
+        let rightStr = ASTtoStr(formula.right, prec);
+
+        // For right-associative (implies, iff), add parentheses to left if precedence <=
+        if (
+            (formula.type === "implies" || formula.type === "iff") &&
+            getPrecedence(formula.left.type) <= prec
+        ) {
+            leftStr = "(" + leftStr + ")";
+        } else if (getPrecedence(formula.left.type) < prec) {
+            leftStr = "(" + leftStr + ")";
+        }
+
+        // For left-associative (and, or), add parentheses to right if precedence <=
+        if (
+            (formula.type === "and" || formula.type === "or") &&
+            getPrecedence(formula.right.type) <= prec
+        ) {
+            rightStr = "(" + rightStr + ")";
+        } else if (getPrecedence(formula.right.type) < prec) {
+            rightStr = "(" + rightStr + ")";
+        }
+
+        let op = {
+            "and": " ∧ ",
+            "or": " ∨ ",
+            "implies": " ⟹ ",
+            "iff": " ⟺ "
+        }[formula.type];
+
+        let str = leftStr + op + rightStr;
+        return str;
     }
 }
