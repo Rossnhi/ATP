@@ -17,8 +17,6 @@ function matchAxiomSchema(schema, ast, mapping = {}) {
     }
     if (schema.type !== ast.type) return false;
     switch (schema.type) {
-        case "var":
-            return schema.name === ast.name;
         case "not":
             return matchAxiomSchema(schema.expr, ast.expr, mapping);
         case "and":
@@ -34,10 +32,45 @@ function matchAxiomSchema(schema, ast, mapping = {}) {
     }
 }
 
+function subAxiomSchema(schema, mapping) {
+    if (schema.type === "metavar") {
+        // Substitute with the mapped formula, or leave as is if not found
+        return mapping[schema.name].clone();
+    }
+    if (schema.type === "not") {
+        return new Not(subAxiomSchema(schema.expr, mapping));
+    }
+    if (schema.type === "and") {
+        return new And(
+            subAxiomSchema(schema.left, mapping),
+            subAxiomSchema(schema.right, mapping)
+        );
+    }
+    if (schema.type === "or") {
+        return new Or(
+            subAxiomSchema(schema.left, mapping),
+            subAxiomSchema(schema.right, mapping)
+        );
+    }
+    if (schema.type === "implies") {
+        return new Implies(
+            subAxiomSchema(schema.left, mapping),
+            subAxiomSchema(schema.right, mapping)
+        );
+    }
+    if (schema.type === "iff") {
+        return new Iff(
+            subAxiomSchema(schema.left, mapping),
+            subAxiomSchema(schema.right, mapping)
+        );
+    }
+    // If schema type is not recognized, return as is
+    return schema;
+}
 
 // TEST
 
-const ast = parse(tokenize("(p ⟹ q) ⟹ q ⟹ p ⟹ q"));
+
 
 // Example axiom schema AST:
 const axiom1 = new Implies(
@@ -48,7 +81,13 @@ const axiom1 = new Implies(
     )
 );
 
-const mapping = {};
-const isAxiom = matchAxiomSchema(axiom1, ast, mapping);
-console.log(isAxiom); // true
-isAxiom && console.log(mapping); // { A: Var('p'), B: Var('q') }
+
+// Test - Match Axiom Schema
+// const ast = parse(tokenize("(p ⟹ q) ⟹ q ⟹ p ⟹ q"));
+// const mapping = {};
+// const isAxiom = matchAxiomSchema(axiom1, ast, mapping);
+// console.log(isAxiom); // true
+// isAxiom && console.log(mapping); // { A: Var('p'), B: Var('q') }
+
+// Text - Sub Axiom Schema
+//console.log(subAxiomSchema(axiom1, {A : new Implies( new Var("p"), new Var("q")), B : new Var("q")}));
