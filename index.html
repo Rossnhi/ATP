@@ -31,7 +31,11 @@
                 <textarea name="" id="verifyConclusion" class="promptChildren" placeholder="Enter conclusion..."></textarea>
             </div>
             <button id="verifyButton">Verify</button>
-            <textarea name="" id="proofInp" placeholder="Type proof..."></textarea>
+            <div id="verifierContainer">
+                <textarea id="proofLineNumbers" class="verifierChildren" readonly></textarea>
+                <textarea name="" id="proofInp" class="verifierChildren" placeholder="Type proof..."></textarea>
+                <textarea name="" id="verifier" class="verifierChildren" readonly></textarea>
+            </div>
         </div>
         <div class="tab" id="proveTab">
             <div class="promptContainer">
