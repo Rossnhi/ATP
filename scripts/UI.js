@@ -20,10 +20,70 @@ function handleTabClick(e) {
     document.getElementById("proveTab").style.display = "block";
   }
 }
+
+function handleOperators(e) {
+  e.target.value = e.target.value
+    .replace(/~|&|\||<=>|=>|<= |\\in|\\all|\\exists/g, m => ({
+      "~": "\u00AC",
+      "&": "\u2227",
+      "|": "\u2228",
+      "<=>": "\u27FA",
+      "=>": "\u27F9",
+      "<= ": "\u27F8 ",
+      "\\in": "\u2208",
+      "\\all": "\u2200",
+      "\\exists": "\u2203"
+    }[m]));
+}
+
 // Verify Tab
+
+let verifyPremisesText = document.getElementById("verifyPremises");
+verifyPremisesText.addEventListener("input", handleOperators);
+
+let verifyConclusionText = document.getElementById("verifyConclusion");
+verifyConclusionText.addEventListener("input", handleOperators);
+
 let proofInpText = document.getElementById("proofInp");
 proofInpText.addEventListener("input", handleOperators);
+proofInpText.addEventListener("input", updateLineNumbers);
+proofInpText.addEventListener("scroll", () => {
+  lineNumbers.scrollTop = proofInpText.scrollTop;
+});
 
+let verifyButton = document.getElementById("verifyButton");
+verifyButton.addEventListener("click", handleVerify);
+
+const lineNumbers = document.getElementById("proofLineNumbers");
+
+function handleVerify() {
+  let premises = verifyPremisesText.value.trim().split('\n').filter(line => line.length > 0);
+  let premisesAST = [];
+  for (let premise of premises) {
+    premisesAST.push(parse(tokenize(premise)));
+  }
+  let conclusionsAST = verifyConclusionText.value.trim() != '' ? parse(tokenize(verifyConclusionText.value)) : null;
+  let proofInput = proofInpText.value.trim().split('\n').filter(line => line.length > 0);
+  let proofInputAST = [];
+  for (let proofLine of proofInput) {
+    proofInputAST.push(parse(tokenize(proofLine)));
+  }
+  data.premisesAST = premisesAST;
+  data.conclusionsAST = conclusionsAST;
+  data.mode = "verify";
+  data.proofInput = proofInputAST;
+
+  document.getElementById("verifier").value = "";
+  verify();
+  displayVerify();
+}
+
+function updateLineNumbers() {
+  const lines = proofInpText.value.split('\n');
+  lineNumbers.value = lines.map((_, idx) => idx + 1).join('\n');
+  lineNumbers.style.height = proofInpText.offsetHeight + "px";
+  lineNumbers.scrollTop = proofInpText.scrollTop;
+}
 
 // Prove Tab
 
@@ -32,21 +92,6 @@ premisesText.addEventListener("input", handleOperators);
 
 let conclusionText = document.getElementById("conclusion");
 conclusionText.addEventListener("input", handleOperators);
-
-function handleOperators(e) {
-  e.target.value = e.target.value
-  .replace(/~|&|\||<=>|=>|<=|\\in|\\all|\\exists/g, m => ({
-    "~": "\u00AC",
-    "&": "\u2227",
-    "|": "\u2228",
-    "<=>": "\u27FA",
-    "=>": "\u27F9",
-    "<= ": "\u27F8 ",
-    "\\in" : "\u2208",
-    "\\all" : "\u2200",
-    "\\exists" : "\u2203"
-  }[m]));
-}
 
 let proveButton = document.getElementById("proveButton");
 proveButton.addEventListener("click", handleProve);
@@ -60,7 +105,17 @@ function handleProve() {
   let conclusionsAST = conclusionText.value.trim() != '' ?  parse(tokenize(conclusionText.value)) : null;
   data.premisesAST = premisesAST;
   data.conclusionsAST = conclusionsAST;
+  data.mode = "prove";
 
+  removeAllChildNodes(document.getElementById("proof"));
   prove();
   displayProof();
 }
+
+// Helper
+function removeAllChildNodes(parent) {
+  while (parent.firstChild) {
+    parent.removeChild(parent.firstChild);
+  }
+}
+
