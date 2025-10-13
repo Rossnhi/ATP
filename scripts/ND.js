@@ -60,11 +60,27 @@ for (let i = 0; i < proofState.length; i++) {
 }
 }
 
+// Helper - get all list of size k of combinations of elements of l
+function getCombos(k, l) {
+    if (k == 1) {
+        return l.map(x => [x]);
+    }
+    let combos = [];
+    for (let i = 0; i < l.length; i++) {
+        let rest = getCombos(k - 1, l.slice(0, i).concat(l.slice(i + 1))); // l.slice(0, i).concat(l.slice(i + 1)) or l.slice(i + 1)
+        for (let r of rest) {
+            combos.push([l[i], ...r]);
+        }
+    }
+    return combos;
+}
+
 function prove() {
     premisesAST = window.appData.premisesAST;
     goalAST = window.appData.conclusionsAST;
 
     // add premises to proofState
+    proofState = [];
     for (let premise in premisesAST) {
         proofState.push({
             id : parseInt(premise),
@@ -74,20 +90,6 @@ function prove() {
         });
     }
 
-    // get all list of size k of combinations of elements of l
-    function getCombos(k, l) {
-        if (k == 1) {
-            return l.map(x => [x]);
-        }
-        let combos = [];
-        for (let i = 0; i < l.length; i++) {
-            let rest = getCombos(k - 1, l.slice(0, i).concat(l.slice(i + 1))); // l.slice(0, i).concat(l.slice(i + 1)) or l.slice(i + 1)
-            for (let r of rest) {
-                combos.push([l[i], ...r]);
-            }
-        }
-        return combos;
-    }
     const ruleOrder = ["andElim", "implicationElim", "iffElim", "notElim", "andIntro"]; // orIntro
     let changed = true;
     while(changed) {
@@ -95,7 +97,7 @@ function prove() {
         let match;
         for (let ruleName of ruleOrder) {
             let rule = rulesOfInference[ruleName];
-            let combos = getCombos(rule.premises.length, proofState.map(f => f));
+            let combos = getCombos(rule.premises.length, proofState);
             let matchFound;
             for (let combo of combos) {
                 let mapping = {};
@@ -136,8 +138,93 @@ function prove() {
 function inProofState(formula) {
     for (proofline of proofState) {
         if(formula.equals(proofline.formula)) {
-            return true;
+            return proofline.id;
         }
     }
     return false;
 }
+
+function verify() {
+    premisesAST = window.appData.premisesAST;
+    goalAST = window.appData.conclusionsAST;
+    proofInpAST = window.appData.proofInput;
+    
+    proofState = [];
+
+    for (let proofline of proofInpAST) {
+        let matchFound;
+        let match;
+        for (let premise in premisesAST) {
+            if (proofline.equals(premisesAST[premise])) {
+                proofState.push({
+                    id: proofState.length,
+                    formula: proofline,
+                    justification: "premise",
+                    parent: []
+                });
+                matchFound = true;
+                break;
+            }
+        }
+        if(matchFound) {
+            continue;
+        }
+
+        for (let rule in rulesOfInference) {
+            for (let con of rulesOfInference[rule].conclusion) {
+                let mapping = {};
+                if (matchAxiomSchema(con, proofline, mapping)){
+                    let combos = getCombos(rulesOfInference[rule].premises.length, proofState);
+                    for (let combo of combos) {
+                        let premiseMapping = {...mapping}; 
+                        matchFound = true;
+                        for (let i = 0; i < combo.length; i++) {
+                            if (!matchAxiomSchema(rulesOfInference[rule].premises[i], combo[i].formula, premiseMapping)) {
+                                matchFound = false;
+                                break;
+                            }
+                        }
+                        if (matchFound) {
+                            match = combo;
+                            break;
+                        }
+                    }
+                    if (matchFound) {
+                        break;
+                    }
+                }
+            }
+            if (matchFound) {
+                proofState.push({
+                    id: proofState.length,
+                    formula: proofline,
+                    justification: rulesOfInference[rule].name,
+                    parent: match.map(p => p.id + 1)
+                });
+                break;
+            }
+        }
+        if (!matchFound) {
+            proofState.push({
+                id: proofState.length,
+                formula: proofline,
+                justification: "ERORR!",
+                parent: []
+            });
+            break;
+        }
+    }
+}
+
+function displayVerify() {
+    let verifier = document.getElementById("verifier");
+    for (let proofline of proofState) {
+        console.log(proofline);
+        let parentStr = proofline.parent.length > 0 ? ` [${proofline.parent.join(", ")}]` : "";
+        let textContent = `${proofline.justification}${parentStr}`;
+        verifier.value += textContent + "\n";
+    }
+}
+
+
+
