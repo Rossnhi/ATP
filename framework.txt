@@ -1,0 +1,47 @@
+these
+p 
+p ⟹ q
+(p ⟹ q) ⟹ q ⟹ r
+gives
+r
+
+these
+p ∧ q
+p ⟹ r
+(p ⟹ r) ⟹ r ⟹ s
+s ⟹ q ⟹ t
+gives
+t
+
+these
+p ∧ q
+p ⟹ r
+q ∧ r ⟹ t
+gives
+t
+
+these
+p ∧ q
+p ⟹ r
+(r ⟹ s) ⟹ s ⟹ t
+q ⟹ r ⟹ s
+gives
+t
+
+these
+p ∧ q
+p ⟹ r
+(r ⟹ s) ⟹ s ⟹ t
+q ⟹ r ⟹ s
+s ∧ t ⟹ u
+gives
+u
+
+these
+n is even
+n is even ⟹ n^2 is even
+m is even
+m is even ⟹ m^2 is even
+(n^2 is even ∧ m^2 is even) ⟹ n^2 + m^2 is even
+gives
+n^2 + m^2 is even
