@@ -96,7 +96,7 @@ class Iff extends Formula {
 
 // returns a list like ['p', '⟹', '¬', '(', 'q', '∨', 'r', ')', '∧', 'p']
 function tokenize(input) {
-    let regEx = /([A-Za-z]+(?:\s+[A-Za-z]+)*|\u00AC|\u2227|\u2228|\u27FA|\u27F9|[\(\)])/g;
+    let regEx = /([A-Za-z0-9^+]+(?:\s+[A-Za-z0-9^+]+)*|\u00AC|\u2227|\u2228|\u27FA|\u27F9|[\(\)])/g;
     let tokens = input.match(regEx);
     return tokens;
 }
