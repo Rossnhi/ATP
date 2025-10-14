@@ -110,12 +110,23 @@ function prove() {
                 }
                 let conclusion = null;
                 if (matchFound) {
-                    conclusion = subAxiomSchema(rule.conclusion[0], mapping);
-                    if (!inProofState(conclusion)) {
-                        match = { combo: combo, conclusion: conclusion };
+                    matchFound = false;
+                    for (let con of rule.conclusion) {
+                        conclusion = subAxiomSchema(con, mapping);
+                        if (ruleName == "andIntro" && (conclusion.left.type == "and" || conclusion.right.type == "and")) {
+                            break;
+                        }
+                        if (!inProofState(conclusion)) {
+                            match = { combo: combo, conclusion: conclusion };
+                            matchFound = true;
+                            break;
+                        }
+                    }
+
+                    if (matchFound) {
                         break;
                     }
-                    matchFound = false;
+                    
                 }
             }
             if (matchFound) {
@@ -138,7 +149,7 @@ function prove() {
 function inProofState(formula) {
     for (proofline of proofState) {
         if(formula.equals(proofline.formula)) {
-            return proofline.id;
+            return true;
         }
     }
     return false;
@@ -208,7 +219,7 @@ function verify() {
             proofState.push({
                 id: proofState.length,
                 formula: proofline,
-                justification: "ERORR!",
+                justification: "ERROR!",
                 parent: []
             });
             break;
