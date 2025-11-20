@@ -50,6 +50,15 @@ proofInpText.addEventListener("input", updateLineNumbers);
 proofInpText.addEventListener("scroll", () => {
   lineNumbers.scrollTop = proofInpText.scrollTop;
 });
+proofInpText.addEventListener("keydown", (e) => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const start = proofInpText.selectionStart;
+    const end = proofInpText.selectionEnd;
+    proofInpText.value = proofInpText.value.substring(0, start) + '\t' + proofInpText.value.substring(end);
+    proofInpText.selectionStart = proofInpText.selectionEnd = start + 1;
+  }
+});
 
 let verifyButton = document.getElementById("verifyButton");
 verifyButton.addEventListener("click", handleVerify);
