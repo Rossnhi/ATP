@@ -45,3 +45,14 @@ m is even ⟹ m^2 is even
 (n^2 is even ∧ m^2 is even) ⟹ n^2 + m^2 is even
 gives
 n^2 + m^2 is even
+
+console.log("1 ", mapping);
+            let tempMapping = {...mapping};
+            let match = matchAxiomSchema(schema.left, ast.left, tempMapping) && matchAxiomSchema(schema.right, ast.right, tempMapping);
+            console.log("2 ", mapping);
+            if (!match) {
+                tempMapping = mapping;
+                match = matchAxiomSchema(schema.left, ast.right, tempMapping) && matchAxiomSchema(schema.right, ast.left, tempMapping);
+                console.log("3 ", mapping);
+            }
+            return match;

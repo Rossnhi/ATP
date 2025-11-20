@@ -3,7 +3,7 @@ class Formula {
         if (this.type != other.type) {
             return false;
         }
-        if (this.left.equals(other.left) && this.right.equals(other.right)) {
+        if ((this.left.equals(other.left) && this.right.equals(other.right)) || (this.left.equals(other.right) && this.right.equals(other.left))) {
             return true;
         }
         return false;
@@ -82,6 +82,16 @@ class Implies extends Formula {
         this.left = left;
         this.right = right;
         this.type = "implies";
+    }
+
+    equals(other) {
+        if (this.type != other.type) {
+            return false;
+        }
+        if (this.left.equals(other.left) && this.right.equals(other.right)) {
+            return true;
+        }
+        return false;
     }
 }
 

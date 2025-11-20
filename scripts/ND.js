@@ -4,7 +4,7 @@ B = new MetaVar("B");
 rulesOfInference = {
     andIntro : {
         premises : [A, B],
-        conclusion : [new And(A, B)],
+        conclusion: [new And(A, B), new And(B, A)],
         name : "∧-Intro"
     },
     andElim : {
@@ -14,7 +14,7 @@ rulesOfInference = {
     },
     orIntro : {
         premises : [A],
-        conclusion : [new Or(A, B)],
+        conclusion: [new Or(A, B), new Or(B, A)],
         name : "∨-Intro"
     },
     implicationElim : {
@@ -230,12 +230,8 @@ function verify() {
 function displayVerify() {
     let verifier = document.getElementById("verifier");
     for (let proofline of proofState) {
-        console.log(proofline);
         let parentStr = proofline.parent.length > 0 ? ` [${proofline.parent.join(", ")}]` : "";
         let textContent = `${proofline.justification}${parentStr}`;
         verifier.value += textContent + "\n";
     }
 }
-
-
-
