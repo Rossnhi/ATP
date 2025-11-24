@@ -1,3 +1,5 @@
+For PROOFS
+
 these
 p 
 p ⟹ q
@@ -45,6 +47,46 @@ m is even ⟹ m^2 is even
 (n^2 is even ∧ m^2 is even) ⟹ n^2 + m^2 is even
 gives
 n^2 + m^2 is even
+
+
+for VERIFICATIONS
+
+p ⟹ q ⟹ r
+assume p ⟹ q
+	assume p
+		q ⟹ r
+		q
+		r
+	p ⟹ r
+(p ⟹ q) ⟹ (p ⟹ r)
+
+(p ∧ q) ⟹ r
+(p ∧ s) ⟹ t
+assume p
+	assume q ∨ s
+		assume q
+			p ∧ q
+			r
+			r ∨ t
+		q ⟹ (r ∨ t)
+		assume s     
+			p ∧ s
+			t
+			r ∨ t
+		s ⟹ (r ∨ t)
+		r ∨ t
+	(q ∨ s) ⟹ (r ∨ t)
+p ⟹ ((q ∨ s) ⟹ (r ∨ t))
+
+assume p
+	assume q
+		assume r
+			assume s
+				p ∧ s
+			s ⟹ (p ∧ s)
+		r ⟹ (s ⟹ (p ∧ s))
+	q ⟹ (r ⟹ (s ⟹ (p ∧ s)))
+p ⟹ (q ⟹ (r ⟹ (s ⟹ (p ∧ s))))
 
 console.log("1 ", mapping);
             let tempMapping = {...mapping};

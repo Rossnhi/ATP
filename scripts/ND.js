@@ -1,5 +1,7 @@
 A = new MetaVar("A");
 B = new MetaVar("B");
+C = new MetaVar("C");
+
 
 rulesOfInference = {
     andIntro : {
@@ -32,6 +34,11 @@ rulesOfInference = {
         conclusion : [new Implies(A, B), new Implies(B, A)],
         name : "⟹-Elim"
     },
+    orElim : {
+        premises: [new Or(A, B), new Implies(A, C), new Implies(B, C)],
+        conclusion: [C],
+        name: "∨-Elim"
+    }
 }
 
 let proofState = [];
@@ -161,17 +168,65 @@ function verify() {
     proofInpAST = window.appData.proofInput;
     
     proofState = [];
-
     for (let proofline of proofInpAST) {
-        let matchFound;
-        let match;
-        for (let premise in premisesAST) {
-            if (proofline.equals(premisesAST[premise])) {
+
+        //add implication after suproof discharge
+        if (proofState.length > 0 && proofline[2] < proofState.at(-1).level) {
+            let assumption;
+            for (let i = proofState.length - 1; i >= 0; i--) {
+                if (proofState[i].level < proofState.at(-1).level && proofState[i].isAssumption) {
+                    assumption = proofState[i];
+                    break;
+                }
+            }
+            if(!assumption) {
+                addErrorToProofState(proofline[0]);
+                break;
+            }
+            if (proofline[0].equals(new Implies(assumption.formula, proofState.at(-1).formula))) {
                 proofState.push({
                     id: proofState.length,
-                    formula: proofline,
+                    formula: proofline[0],
+                    justification: "⟹-Intro",
+                    parent: [ assumption.id + 1, proofState.length],
+                    isAssumption: false,
+                    level: proofline[2]
+                });
+                assumption.active = false;
+                continue;
+            }
+            else {
+                addErrorToProofState(proofline[0]);
+                break;
+            }
+        }
+
+        //check if assumption
+        if(proofline[1]) {
+            proofState.push({
+                id: proofState.length,
+                formula: proofline[0],
+                justification: "assumption",
+                parent: [],
+                isAssumption: true,
+                level: proofline[2],
+                active : true
+            });
+            continue;
+        }
+
+        let matchFound;
+        let match;
+        // check if premise
+        for (let premise in premisesAST) {
+            if (proofline[0].equals(premisesAST[premise])) {
+                proofState.push({
+                    id: proofState.length,
+                    formula: proofline[0],
                     justification: "premise",
-                    parent: []
+                    parent: [],
+                    isAssumption : false,
+                    level : proofline[2]
                 });
                 matchFound = true;
                 break;
@@ -184,8 +239,8 @@ function verify() {
         for (let rule in rulesOfInference) {
             for (let con of rulesOfInference[rule].conclusion) {
                 let mapping = {};
-                if (matchAxiomSchema(con, proofline, mapping)){
-                    let combos = getCombos(rulesOfInference[rule].premises.length, proofState);
+                if (matchAxiomSchema(con, proofline[0], mapping)){
+                    let combos = getCombos(rulesOfInference[rule].premises.length, filterProofState(proofline));
                     for (let combo of combos) {
                         let premiseMapping = {...mapping}; 
                         matchFound = true;
@@ -208,23 +263,57 @@ function verify() {
             if (matchFound) {
                 proofState.push({
                     id: proofState.length,
-                    formula: proofline,
+                    formula: proofline[0],
                     justification: rulesOfInference[rule].name,
-                    parent: match.map(p => p.id + 1)
+                    parent: match.map(p => p.id + 1),
+                    isAssumption: false,
+                    level: proofline[2]
                 });
                 break;
             }
         }
         if (!matchFound) {
-            proofState.push({
-                id: proofState.length,
-                formula: proofline,
-                justification: "ERROR!",
-                parent: []
-            });
+            addErrorToProofState(proofline[0]);
             break;
         }
     }
+}
+
+// called from level of j = j[2] tofilter invalid previouslines of proofState for subproof
+function filterProofState(j) {
+    let filtered =  proofState.filter(p => {
+        if (p.level > j[2]) {
+            return false;
+        }
+        if (p.isAssumption && !p.active) {
+            return false;
+        }
+
+        let assumption;
+        for (let i = p.id - 1; i >= 0; i--) {
+            if (proofState[i].level < p.level && proofState[i].isAssumption) {
+                assumption = proofState[i];
+                break;
+            }
+        }
+        if(assumption && !assumption.active) {
+            return false;
+        }
+
+        return true;
+    });
+    return filtered;
+}
+
+function addErrorToProofState(f) {
+    proofState.push({
+        id: proofState.length,
+        formula: f,
+        justification: "ERROR!",
+        parent: [],
+        isAssumption: false,
+        level: 0
+    });
 }
 
 function displayVerify() {

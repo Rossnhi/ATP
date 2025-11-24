@@ -72,10 +72,16 @@ function handleVerify() {
     premisesAST.push(parse(tokenize(premise)));
   }
   let conclusionsAST = verifyConclusionText.value.trim() != '' ? parse(tokenize(verifyConclusionText.value)) : null;
-  let proofInput = proofInpText.value.trim().split('\n').filter(line => line.length > 0);
+  let proofInput = proofInpText.value.split('\n').filter(line => line.length > 0);
   let proofInputAST = [];
   for (let proofLine of proofInput) {
-    proofInputAST.push(parse(tokenize(proofLine)));
+    let tabCount = [...proofLine.matchAll(/\t/g)].length;
+    let isAssumption = false;
+    if (proofLine.trim().slice(0, 6) == "assume"){
+      isAssumption = true;
+      proofLine = proofLine.trim().slice(6);
+    }
+    proofInputAST.push([parse(tokenize(proofLine)), isAssumption, tabCount]);
   }
   data.premisesAST = premisesAST;
   data.conclusionsAST = conclusionsAST;
