@@ -127,51 +127,55 @@ n^2 + m^2 is even
 Proofs are written using explicit assumptions and indentation with tabs. 
 Indentation is shown using tree-style structure.
 
-Verification Example 1
-<br>
-p => q => r<br>
-assume p => q<br>
-├─ assume p<br>
-│ ├─ q => r<br>
-│ ├─ q<br>
-│ └─ r<br>
-└─ p => r<br>
-(p => q) => (p => r)<br>
+---
+
+### Verification Example 1
+
+p => q => r  
+assume p => q  
+└─ assume p  
+└──└─ q => r  
+└──└─ q  
+└──└─ r  
+└─ p => r  
+(p => q) => (p => r)
 
 ---
 
-Verification Example 2
-<br>
-(p & q) => r<br>
-(p & s) => t<br>
-assume p<br>
-└─ assume q | s<br>
-  ├─ assume q<br>
-  │ ├─ p & q<br>
-  │ ├─ r<br>
-  │ └─ r | t<br>
-  ├─ q => (r | t)<br>
-  ├─ assume s<br>
-  │ ├─ p & s<br>
-  │ ├─ t<br>
-  │ └─ r | t<br>
-  ├─ s => (r | t)<br>
-  └─ r | t<br>
-(q | s) => (r | t)<br>
-p => ((q | s) => (r | t))<br>
+### Verification Example 2
+
+(p & q) => r  
+(p & s) => t  
+assume p  
+└─ assume q | s  
+└──└─ assume q  
+└──└──└─ p & q  
+└──└──└─ r  
+└──└──└─ r | t  
+└──└─ q => (r | t)  
+└──└─ assume s  
+└──└──└─ p & s  
+└──└──└─ t  
+└──└──└─ r | t  
+└──└─ s => (r | t)  
+└──└─ r | t  
+(q | s) => (r | t)  
+p => ((q | s) => (r | t))
 
 ---
-Verification Example 3
-<br>
-assume p<br>
-└─ assume q<br>
-  └─ assume r<br>
-    └─ assume s<br>
-      └─ p & s<br>
-    └─ s => (p & s)<br>
-  └─ r => (s => (p & s))<br>
-└─ q => (r => (s => (p & s)))<br>
-p => (q => (r => (s => (p & s))))<br>
+
+### Verification Example 3
+
+assume p  
+└─ assume q  
+└──└─ assume r  
+└──└──└─ assume s  
+└──└──└──└─ p & s  
+└──└──└─ s => (p & s)  
+└──└─ r => (s => (p & s))  
+└─ q => (r => (s => (p & s)))  
+p => (q => (r => (s => (p & s))))
+
 
 
 ## Notes
