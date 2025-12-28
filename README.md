@@ -51,73 +51,73 @@ Enter premises line by line.
 The prover derives the conclusion automatically.
 
 Example 1  
-Input:
+Premises:
 p  
 p => q  
 (p => q) => q => r  
 
-Gives:  
+Conclusion:  
 r
 
 ---
 
 Example 2  
-Input:
+Premises:
 p & q  
 p => r  
 (p => r) => r => s  
 s => q => t  
 
-Gives:  
+Conclusion:  
 t
 
 ---
 
 Example 3  
-Input:
+Premises:
 p & q  
 p => r  
 q & r => t  
 
-Gives:  
+Conclusion:  
 t
 
 ---
 
 Example 4  
-Input:
+Premises:
 p & q  
 p => r  
 (r => s) => s => t  
 q => r => s  
 
-Gives:  
+Conclusion:  
 t
 
 ---
 
 Example 5  
-Input:
+Premises:
 p & q  
 p => r  
 (r => s) => s => t  
 q => r => s  
 s & t => u  
 
-Gives:  
+Conclusion:  
 u
 
 ---
 
 Example 6 (Mathematical Reasoning)  
-Input:
+Premises:
 n is even  
 n is even => n^2 is even  
 m is even  
 m is even => m^2 is even  
 (n^2 is even & m^2 is even) => n^2 + m^2 is even  
 
-Gives:  
+Conclusion:  
 n^2 + m^2 is even
 
 ---
