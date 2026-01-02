@@ -111,20 +111,109 @@ conclusionText.addEventListener("input", handleOperators);
 let proveButton = document.getElementById("proveButton");
 proveButton.addEventListener("click", handleProve);
 
-function handleProve() {
-  let premises = premisesText.value.trim().split('\n').filter(line => line.length > 0);
-  let premisesAST = [];
-  for (let premise of premises) {
-    premisesAST.push(parse(tokenize(premise)));
-  }
-  let conclusionsAST = conclusionText.value.trim() != '' ?  parse(tokenize(conclusionText.value)) : null;
-  data.premisesAST = premisesAST;
-  data.conclusionsAST = conclusionsAST;
-  data.mode = "prove";
+/**
+ * Detect if input is FOL (has ∀, ∃, =, predicates with parens) or propositional
+ */
+function isFOLFormula(text) {
+  return /[∀∃]|=[^=]|[A-Z][a-z]*\(|op\(/.test(text);
+}
 
-  removeAllChildNodes(document.getElementById("proof"));
-  prove();
-  displayProof();
+function handleProve() {
+  let premisesInput = premisesText.value.trim().split('\n').filter(line => line.length > 0);
+  let conclusionInput = conclusionText.value.trim();
+  
+  // Detect if FOL or propositional
+  let isFOL = premisesInput.some(p => isFOLFormula(p)) || isFOLFormula(conclusionInput);
+  
+  if (isFOL) {
+    // Use FOL prover
+    handleProveFOL(premisesInput, conclusionInput);
+  } else {
+    // Use propositional prover (existing logic)
+    let premisesAST = [];
+    for (let premise of premisesInput) {
+      premisesAST.push(parse(tokenize(premise)));
+    }
+    let conclusionsAST = conclusionInput != '' ? parse(tokenize(conclusionInput)) : null;
+    data.premisesAST = premisesAST;
+    data.conclusionsAST = conclusionsAST;
+    data.mode = "prove";
+
+    removeAllChildNodes(document.getElementById("proof"));
+    prove();
+    displayProof();
+  }
+}
+
+/**
+ * FOL Prover Handler
+ */
+function handleProveFOL(premisesInput, conclusionInput) {
+  try {
+    // Parse FOL formulas
+    let premisesAST = [];
+    for (let premise of premisesInput) {
+      let tokens = tokenizeFOL(premise);
+      let parsed = parseFOL(tokens);
+      premisesAST.push(parsed);
+    }
+    
+    let conclusionsAST = null;
+    if (conclusionInput != '') {
+      let tokens = tokenizeFOL(conclusionInput);
+      conclusionsAST = parseFOL(tokens);
+    }
+    
+    data.premisesAST = premisesAST;
+    data.conclusionsAST = conclusionsAST;
+    data.mode = "prove_fol";
+    
+    removeAllChildNodes(document.getElementById("proof"));
+    
+    // Run FOL prover and render only the human-readable proof steps
+    let proofOutput = document.getElementById("proof");
+    removeAllChildNodes(proofOutput);
+
+    // Create KB with group theory axioms and attempt proof
+    let kb = setupGroupTheoryKB();
+    let result = proveGroupTheory(kb, premisesAST, conclusionsAST);
+
+    if (result.success && result.steps && result.steps.length > 0) {
+      // Render each step as a two-column row: left = step number, right = reasoning
+      for (let i = 0; i < result.steps.length; i++) {
+        let s = result.steps[i];
+        let li = document.createElement('li');
+        li.style.display = 'flex';
+        li.style.alignItems = 'flex-start';
+        li.style.marginBottom = '6px';
+
+        let left = document.createElement('div');
+        left.textContent = 'Step ' + (i+1);
+        left.style.flex = '0 0 100px';
+        left.style.fontWeight = '600';
+        left.style.color = '#222';
+
+        let right = document.createElement('div');
+        right.textContent = s;
+        right.style.flex = '1';
+        right.style.whiteSpace = 'pre-wrap';
+
+        li.appendChild(left);
+        li.appendChild(right);
+        proofOutput.appendChild(li);
+      }
+    } else {
+      // If not proven, show a concise failure message
+      let li = document.createElement('li');
+      li.textContent = 'Not proven';
+      li.style.color = 'red';
+      proofOutput.appendChild(li);
+    }
+    
+  } catch(e) {
+    let proofOutput = document.getElementById("proof");
+    proofOutput.innerHTML = "<li style='color: red;'><strong>Parse Error:</strong> " + e.message + "</li>";
+  }
 }
 
 // Helper
