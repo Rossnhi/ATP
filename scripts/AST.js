@@ -1,3 +1,63 @@
+
+class Term {
+    constructor(name) {
+        this.name = name;
+        this.type = "term";
+    }
+
+    equals(other) {
+        if(this.name != other.name || this.type != other.type) {
+            return false;
+        }
+        return true;
+    }
+    clone() {
+        return new this.constructor(this.name);
+    }
+}
+
+class Variable extends Term{
+    constructor(name) {
+        super();
+        this.name = name
+        this.type = "variable"
+    }
+}
+
+class Constant extends Term {
+    constructor(name) {
+        super();
+        this.name = name
+        this.type = "constant"
+    }
+}
+
+class Func extends Term {
+    constructor(name, terms = []) {
+        super();
+        this.name = name;
+        this.terms = terms;
+        this.arity = terms.length;
+        this.type = "function";
+    }
+
+    equals(other) {
+        if (this.type != other.type || this.name != other.name || this.arity != other.arity) {
+            return false;
+        }
+        for (let i = 0; i < this.arity; i++) {
+            if (!this.terms[i].equals(other.terms[i])) {
+                return false
+            }
+        }
+        return true;
+    }
+
+    clone() {
+        return new Func(this.name, this.terms.map(term => term.clone()));
+    }
+}
+
 class Formula {
     equals(other) {
         if (this.type != other.type) {
@@ -14,43 +74,90 @@ class Formula {
     }
 }
 
-class Var extends Formula{
-    constructor(name) {
+class Predicate extends Formula {
+    constructor(name, terms = []) {
         super();
         this.name = name;
-        this.type = "var";
+        this.terms = terms;
+        this.arity = terms.length;
+        this.type = "predicate";
     }
 
     equals(other) {
-        if (this.type != other.type) {
+        if (this.type != other.type || this.name != other.name || this.arity != other.arity) {
             return false;
         }
-        if (this.name == other.name) {
-            return true;
+        for (let i = 0; i < this.arity; i++) {
+            if (!this.terms[i].equals(other.terms[i])) {
+                return false
+            }
         }
-        return false;
+        return true;
     }
 
     clone() {
-        return new Var(this.name);
+        return new Predicate(this.name, this.terms.map( term => term.clone()));
     }
 }
 
-class And extends Formula {
-    constructor(left, right) {
+class Equality extends Formula{
+    constructor(leftTerm, rightTerm) {
         super();
-        this.left = left;
-        this.right = right;
-        this.type = "and";
+        this.left = leftTerm;
+        this.right = rightTerm;
+        this.type = "equality";
+    }
+
+    equals(other) {
+        if (this.type !== other.type) {
+            return false;
+        }
+        return (this.left.equals(other.left) && this.right.equals(other.right)) ||
+            (this.left.equals(other.right) && this.right.equals(other.left));
+    }
+
+    clone() {
+        return new Equality(this.left.clone(), this.right.clone());
     }
 }
 
-class Or extends Formula {
-    constructor(left, right) {
+class Forall extends Formula {
+    constructor(variable, scope) {
         super();
-        this.left = left;
-        this.right = right;
-        this.type = "or";
+        this.variable = variable;
+        this.scope = scope; // can be any formula
+        this.type = "forall"
+    }
+
+    equals(other) {
+        if (this.type !== other.type) {
+            return false;
+        }
+        return this.variable.equals(other.variable) && this.scope.equals(other.scope);
+    }
+
+    clone() {
+        return new Forall(this.variable.clone(), this.scope.clone());
+    }
+}
+
+class Exists extends Formula {
+    constructor(variable, scope) {
+        super();
+        this.variable = variable;
+        this.scope = scope; // can be any formula
+        this.type = "exists"
+    }
+
+    equals(other) {
+        if (this.type !== other.type) {
+            return false;
+        }
+        return this.variable.equals(other.variable) && this.scope.equals(other.scope);
+    }
+
+    clone() {
+        return new Exists(this.variable.clone(), this.scope.clone());
     }
 }
 
@@ -73,6 +180,24 @@ class Not extends Formula {
 
     clone() {
         return new Not(this.expr.clone());
+    }
+}
+
+class And extends Formula {
+    constructor(left, right) {
+        super();
+        this.left = left;
+        this.right = right;
+        this.type = "and";
+    }
+}
+
+class Or extends Formula {
+    constructor(left, right) {
+        super();
+        this.left = left;
+        this.right = right;
+        this.type = "or";
     }
 }
 
@@ -104,14 +229,27 @@ class Iff extends Formula {
     }
 }
 
+
+
 // returns a list like ['p', '⟹', '¬', '(', 'q', '∨', 'r', ')', '∧', 'p']
 function tokenize(input) {
-    let regEx = /([A-Za-z0-9^+]+(?:\s+[A-Za-z0-9^+]+)*|\u00AC|\u2227|\u2228|\u27FA|\u27F9|[\(\)])/g;
+    let regEx;
+    if (proofSystem.value == "Tableau") {
+        regEx = /([A-Za-z0-9]+|\u00AC|\u2227|\u2228|\u27FA|\u27F9|\u2200|\u2203|=|,|\*|[\(\)])/g;
+
+    } else {
+        regEx = /([A-Za-z0-9]+(?:\s+[A-Za-z0-9]+)*|\u00AC|\u2227|\u2228|\u27FA|\u27F9|\u2200|\u2203|=|\*|[\(\)])/g;
+    }
     let tokens = input.match(regEx);
     return tokens;
 }
 
 function parse(tokens) {
+
+    if (proofSystem.value == "Tableau") {
+        return parseFOL(tokens);
+    }
+
     let i = 0;
     expr = parseIff();
     if (i == tokens.length) {
@@ -203,7 +341,7 @@ function parse(tokens) {
                 throw new Error('Propositional Syntax Error: ' + tokens.slice(i));
             }
         }
-        return new Var(consume());
+        return new Predicate(consume());
     }
 }
 
@@ -214,13 +352,13 @@ function getPrecedence(type) {
         case "or": return 3;
         case "and": return 4;
         case "not": return 5;
-        case "var": return 6;
+        case "predicate": return 6;
         default: return 0;
     }
 }
 
 function ASTtoStr(formula, parentPrecedence = 0) {
-    if (formula.type == "var") {
+    if (formula.type == "predicate") {
         return formula.name;
     }
     if (formula.type == "not") {
@@ -264,4 +402,156 @@ function ASTtoStr(formula, parentPrecedence = 0) {
         let str = leftStr + op + rightStr;
         return str;
     }
+}
+
+// FOL
+
+function parseFOL(tokens) {
+    let i = 0;
+    expr = parseIff();
+    if (i == tokens.length) {
+        return expr;
+    }
+    else {
+        alert('FOL Syntax Error: ' + tokens.slice(i));
+        throw new Error('FOL Syntax Error: ' + tokens.slice(i));
+    }
+
+    function peek() {
+        return tokens[i];
+    }
+
+    function consume() {
+        return tokens[i++]; // returns token[i] and makes i = i + 1
+    }
+
+    function parseIff() {
+        let left = parseImplies();
+        if (peek() == '⟺') {
+            consume();
+            return new Iff(left, parseIff());
+        }
+        if (left == undefined) {
+            alert('FOL Syntax Error:');
+            throw new Error('FOL Syntax Error:');
+        }
+        return left;
+    }
+
+    function parseImplies() {
+        let left = parseOr();
+        if (peek() == '⟹') {
+            consume();
+            return new Implies(left, parseImplies());
+        }
+        if (left == undefined) {
+            alert('FOL Syntax Error:');
+            throw new Error('FOL Syntax Error:');
+        }
+        return left;
+    }
+
+    function parseOr() {
+        let left = parseAnd();
+        while (peek() == '∨') {
+            consume();
+            left = new Or(left, parseAnd());
+        }
+        if (left == undefined) {
+            alert('FOL Syntax Error:');
+            throw new Error('FOL Syntax Error:');
+        }
+        return left;
+    }
+
+    function parseAnd() {
+        let left = parseNot();
+        while (peek() == '∧') {
+            consume();
+            left = new And(left, parseNot());
+        }
+        if (left == undefined) {
+            alert('FOL Syntax Error:');
+            throw new Error('FOL Syntax Error:');
+        }
+        return left;
+    }
+
+    function parseNot() {
+        if (peek() == '¬') {
+            consume();
+            return new Not(parseNot());
+        }
+        return parseQuantifier();
+    }
+
+    function parseQuantifier() {
+        if (peek() == '∀') {
+            consume();
+            return new Forall(new Variable(consume()), parseQuantifier());
+        }
+        if (peek() == '∃') {
+            consume();
+            return new Exists(new Variable(consume()), parseQuantifier());
+        }
+
+        return parsePrimary();
+    }
+
+    function parsePrimary() {
+        if (peek() == '(') {
+            consume();
+            let expr = parseIff();
+            if (peek() == ')') {
+                consume();
+                return expr;
+            }
+            else {
+                alert('FOL Syntax Error: ' + tokens.slice(i));
+                throw new Error('FOL Syntax Error: ' + tokens.slice(i));
+            }
+        }
+
+        let t1 = parseTerm();
+        if (peek() == "=") {
+            consume();
+            return new Equality(t1, parseTerm());
+        }
+
+        if (t1.type == "function") {
+            return new Predicate(t1.name, t1.terms.map(term => term.clone()));
+        }
+
+        throw new Error('FOL Syntax Error: expected predicate or equality');
+
+    }
+
+    function parseTerm() {
+        let identifier = consume();
+        if (peek() == "(") {
+            consume();
+            let terms = [];
+            while (peek() != ")") {
+                terms.push(parseTerm());
+                if (peek() == ')') {
+                    continue;
+                } else if (peek() == ',') {
+                    consume();
+                    continue;
+                }
+                throw new Error('FOL Syntax Error: expected ,');
+            }
+            consume();
+            return new Func(identifier, terms);
+        }
+        return new Term(identifier);
+    }
+}
+
+function toNNF(formula) {
+
+}
+
+function pushNegation(formula) {
+
 }

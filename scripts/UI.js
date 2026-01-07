@@ -111,6 +111,8 @@ conclusionText.addEventListener("input", handleOperators);
 let proveButton = document.getElementById("proveButton");
 proveButton.addEventListener("click", handleProve);
 
+let proofSystem = document.getElementById("proofSystem");
+
 function handleProve() {
   let premises = premisesText.value.trim().split('\n').filter(line => line.length > 0);
   let premisesAST = [];
