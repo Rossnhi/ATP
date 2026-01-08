@@ -488,11 +488,11 @@ function parseFOL(tokens) {
     function parseQuantifier() {
         if (peek() == '∀') {
             consume();
-            return new Forall(new Variable(consume()), parseQuantifier());
+            return new Forall(new Variable(consume()), parseNot());
         }
         if (peek() == '∃') {
             consume();
-            return new Exists(new Variable(consume()), parseQuantifier());
+            return new Exists(new Variable(consume()), parseNot());
         }
 
         return parsePrimary();
@@ -549,9 +549,39 @@ function parseFOL(tokens) {
 }
 
 function toNNF(formula) {
-
+    if (formula.type == "predicate" || formula.type == "equality") {
+        return formula;
+    } else if (formula.type == "forall") {
+        return new Forall(formula.variable, toNNF(formula.scope));
+    } else if (formula.type == "exists") {
+        return new Exists(formula.variable, toNNF(formula.scope));
+    } else if (formula.type == "not") {
+        return pushNegation(toNNF(formula.expr));
+    } else if (formula.type == "and") {
+        return new And(toNNF(formula.left), toNNF(formula.right));
+    } else if (formula.type == "or") {
+        return new Or(toNNF(formula.left), toNNF(formula.right));
+    } else if (formula.type == "implies") {
+        return new Or(new Not(toNNF(formula.left)), toNNF(formula.right)); // A => B --> ¬A ∨ B
+    } else if (formula.type == "iff") {
+        return new And(new Or(new Not(toNNF(formula.left)), toNNF(formula.right)), new Or(new Not(toNNF(formula.right)), toNNF(formula.left))); // A <=> B --> A → B ⟶ ¬A ∨ B
+    }
 }
 
-function pushNegation(formula) {
+// test example toNNF - P(f(x), y) ∨ (∀x Q(x, y)) ⟹ (T(x) ⟺ B(y))
 
+function pushNegation(formula) {
+    if (formula.type == "predicate" || formula.type == "equality") {
+        return new Not(formula);
+    } else if (formula.type == "forall") {
+        return new Exists(formula.variable, pushNegation(formula.scope));
+    } else if (formula.type == "exists") {
+        return new Forall(formula.variable, pushNegation(formula.scope));
+    } else if (formula.type == "not") {
+        return formula.expr;
+    } else if (formula.type == "and") {
+        return new Or(pushNegation(formula.left), pushNegation(formula.right));
+    } else if (formula.type == "or") {
+        return new And(pushNegation(formula.left), pushNegation(formula.right));
+    }
 }
