@@ -2,7 +2,6 @@
 class Term {
     constructor(name) {
         this.name = name;
-        this.type = "term";
     }
 
     equals(other) {
@@ -10,9 +9,6 @@ class Term {
             return false;
         }
         return true;
-    }
-    clone() {
-        return new this.constructor(this.name);
     }
 }
 
@@ -22,6 +18,10 @@ class Variable extends Term{
         this.name = name
         this.type = "variable"
     }
+
+    clone() {
+        return new Variable(this.name);
+    }
 }
 
 class Constant extends Term {
@@ -29,6 +29,10 @@ class Constant extends Term {
         super();
         this.name = name
         this.type = "constant"
+    }
+
+    clone() {
+        return new Constant(this.name);
     }
 }
 
@@ -229,20 +233,20 @@ class Iff extends Formula {
     }
 }
 
-
-
 // returns a list like ['p', '⟹', '¬', '(', 'q', '∨', 'r', ')', '∧', 'p']
 function tokenize(input) {
     let regEx;
     if (proofSystem.value == "Tableau") {
-        regEx = /([A-Za-z0-9]+|\u00AC|\u2227|\u2228|\u27FA|\u27F9|\u2200|\u2203|=|,|\*|[\(\)])/g;
+        regEx = /([A-Za-z0-9_]+|\u00AC|\u2227|\u2228|\u27FA|\u27F9|\u2200|\u2203|=|,|\*|[\(\)])/g;
 
     } else {
-        regEx = /([A-Za-z0-9]+(?:\s+[A-Za-z0-9]+)*|\u00AC|\u2227|\u2228|\u27FA|\u27F9|\u2200|\u2203|=|\*|[\(\)])/g;
+        regEx = /([A-Za-z0-9_]+(?:\s+[A-Za-z0-9_]+)*|\u00AC|\u2227|\u2228|\u27FA|\u27F9|\u2200|\u2203|=|\*|[\(\)])/g;
     }
     let tokens = input.match(regEx);
     return tokens;
 }
+
+// *Propositional*
 
 function parse(tokens) {
 
@@ -404,8 +408,9 @@ function ASTtoStr(formula, parentPrecedence = 0) {
     }
 }
 
-// FOL
+// *FOL*
 
+// Parser
 function parseFOL(tokens) {
     let i = 0;
     expr = parseIff();
@@ -544,10 +549,20 @@ function parseFOL(tokens) {
             consume();
             return new Func(identifier, terms);
         }
-        return new Term(identifier);
+        if (isVariable(identifier)) {
+            return new Variable(identifier);
+        } else {
+            return new Constant(identifier);
+        }
     }
 }
 
+function isVariable(identifier) {
+    return /^[a-z][a-zA-Z0-9_]*$/.test(identifier);
+}
+
+// NNF
+// test example toNNF - P(f(x), y) ∨ (∀x Q(x, y)) ⟹ (T(x) ⟺ B(y))
 function toNNF(formula) {
     if (formula.type == "predicate" || formula.type == "equality") {
         return formula;
@@ -568,8 +583,6 @@ function toNNF(formula) {
     }
 }
 
-// test example toNNF - P(f(x), y) ∨ (∀x Q(x, y)) ⟹ (T(x) ⟺ B(y))
-
 function pushNegation(formula) {
     if (formula.type == "predicate" || formula.type == "equality") {
         return new Not(formula);
@@ -583,5 +596,132 @@ function pushNegation(formula) {
         return new Or(pushNegation(formula.left), pushNegation(formula.right));
     } else if (formula.type == "or") {
         return new And(pushNegation(formula.left), pushNegation(formula.right));
+    }
+}
+
+// Skolemization
+// toSub is a string representing the name of the variable, subWith is a term
+function substituteTerm2(toSub, subWith, term) {
+    if (term.type == 'variable') {
+        if (term.name == toSub) {
+            return subWith.clone();
+        }
+        return term.clone()
+    }
+    if (term.type == 'function') {
+        return new Func(term.name, term.terms.map(t => substituteTerm(toSub, subWith, t)));
+    }
+
+    if (term.type == 'constant') {
+        return term.clone();
+    }
+    throw new Error("Unrecoganized term Error");
+}
+
+function substituteTerm(toSub, subWith, term) {
+    if (!term || !term.type) {
+        console.error("BAD TERM (null/undefined):", term);
+        throw new Error("Bad term (null/undefined)");
+    }
+
+    if (!(term instanceof Variable) &&
+        !(term instanceof Constant) &&
+        !(term instanceof Func)) {
+
+        console.error("NON-TERM FOUND:", term);
+        throw new Error("Non-term in substituteTerm");
+    }
+
+    if (term.type == "variable") {
+        if (term.name == toSub) {
+            return subWith.clone();
+        }
+        return term.clone();
+    }
+
+    if (term.type == "function") {
+        return new Func(term.name, term.terms.map(t => substituteTerm(toSub, subWith, t)));
+    }
+
+    if (term.type == "constant") {
+        return term.clone();
+    }
+}
+
+
+function substituteFormula(toSub, subWith, formula) {
+    if (formula.type == "predicate") {
+        return new Predicate(formula.name, formula.terms.map(t => substituteTerm(toSub, subWith, t)));
+    } else if (formula.type == "equality") {
+        return new Equality(substituteTerm(toSub, subWith, formula.left), substituteTerm(toSub, subWith, formula.right));
+    } else if (formula.type == "forall") {
+        if(formula.variable.name == toSub) {
+            return formula;
+        }
+        return new Forall(formula.variable, substituteFormula(toSub, subWith, formula.scope));
+    } else if (formula.type == "exists") {
+        if (formula.variable.name == toSub) {
+            return formula;
+        }
+        return new Exists(formula.variable, substituteFormula(toSub, subWith, formula.scope));
+    } else if (formula.type == "not") {
+        return new Not(substituteFormula(toSub, subWith, formula.expr));
+    } else if (formula.type == "and") {
+        return new And(substituteFormula(toSub, subWith, formula.left), substituteFormula(toSub, subWith, formula.right));
+    } else if (formula.type == "or") {
+        return new Or(substituteFormula(toSub, subWith, formula.left), substituteFormula(toSub, subWith, formula.right));
+    }
+    throw new Error("Incorrect formula node");
+}
+
+let activeUniversals = [];
+let skolemCounterConst = 0;
+let skolemCounterFunc = 0;
+
+// required to check if variables are shadowed be same name variables
+function active(v) {
+    for(let universal of activeUniversals) {
+        if(universal.equals(v)) {
+            return true;
+        }
+    }
+    false;
+}
+
+function skolemize(formula) {
+    if (formula.type == "predicate" || formula.type == "equality") {
+        return formula;
+    } else if (formula.type == "forall") {
+        activeUniversals.push(formula.variable);
+        let f =  new Forall(formula.variable, skolemize(formula.scope));
+        activeUniversals.pop();
+        return f;
+    } else if (formula.type == "exists") {
+        let skolem;
+        let copyEnv = [];
+        if(active(formula.variable)) {
+            copyEnv = [...activeUniversals];
+            activeUniversals = activeUniversals.filter(v => !v.equals(formula.variable));
+        }
+        if (activeUniversals.length != 0) {
+            let funcName = `sf${skolemCounterFunc}`;
+            skolemCounterFunc++;
+            skolem =  skolemize(substituteFormula(formula.variable.name, new Func(funcName, [...activeUniversals]), formula.scope));
+        } else {
+            let constName = `SC${skolemCounterConst}`;
+            skolemCounterConst++;
+            skolem =  skolemize(substituteFormula(formula.variable.name, new Constant(constName), formula.scope));
+        }
+        if(copyEnv.length != 0) {
+            activeUniversals = copyEnv;
+        }
+        return skolem;
+
+    } else if (formula.type == "not") {
+        return new Not(skolemize(formula.expr));
+    } else if (formula.type == "and") {
+        return new And(skolemize(formula.left), skolemize(formula.right));
+    } else if (formula.type == "or") {
+        return new Or(skolemize(formula.left), skolemize(formula.right));
     }
 }
