@@ -99,10 +99,46 @@ test("∀x, P(x)", true);      // commas after quantifiers disallowed
 test("P(x) =", true);        // incomplete equality
 test("= P(x)", true);        // invalid equality
 
+
 /* ===============================
-   OPTIONAL (ONLY IF YOU ALLOW PROPOSITIONAL ATOMS)
+   GROUP THEORY EXAMPLES
    =============================== */
 
-// Uncomment ONLY if bare atoms are allowed
-// test("p");
-// test("p ∧ ∀x P(x)");
+test("∀x (*(x, inv(x)) = e)");                     // x * inv(x) = e
+test("∀x ∀y ∀z (*(*(x,y),z) = *(x,*(y,z)))");    // (x*y)*z = x*(y*z)
+test("∀x (*(e, x) = x)");                          // e * x = x
+test("∀x ∃y (*(x,y) = e ∧ *(y,x) = e)");         // inverse exists
+
+/* ===============================
+   FUNCTION SYMBOLS
+   =============================== */
+
+test("inv(x)");                     // unary function (inverse)
+test("inv(inv(x))");                // nested unary function
+test("*(x,y)");                     // binary function (multiplication)
+test("*(*(x,y),z)");                // nested multiplication
+
+/* ===============================
+   DEEPLY NESTED / COMPLEX
+   =============================== */
+
+test("P(f(g(h(x))))");              // deeply nested function
+test("∀x∀y∀z P(x,y,z)");            // chained quantifiers (no spaces)
+test("(∀x P(x))");                  // parenthesized quantified formula
+test("((P(x) ∧ Q(y)))");            // extra parentheses
+test("∀x (∀y (P(x,y)))");           // nested quantifiers with parens
+test("∀x (P(x) ⟹ (∃y (Q(x,y) ∧ R(y))))");  // complex nesting
+test("∃x ∀y (f(x)=f(y) ⟹ x=y)");    // function application in equality
+test("∀x ∃y (f(y)=x ∧ ∀z (f(z)=x ⟹ z=y))");  // surjectivity-like formula
+
+/* ===============================
+   ADDITIONAL ERROR CASES
+   =============================== */
+
+test("∀x, P(x)", true);             // comma after quantifier variable
+test("∃∃x P(x)", true);             // double quantifier
+test("P(x) Q(x)", true);            // two predicates without connective
+test("∀x P(x) ∀y Q(y)", true);      // adjacent quantifiers without nesting
+test("f(x) P(x)", true);            // function followed by predicate with no connective
+test("·(x,y)", true);               // dot not allowed (only * as special function symbol)
+test("+(x,y)", true);               // plus not allowed (only * as special function symbol)
