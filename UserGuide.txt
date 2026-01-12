@@ -1,0 +1,125 @@
+AUTOMATED THEOREM PROVER — USER GUIDE
+====================================
+
+This prover accepts first-order logic (FOL) formulas with equality.
+The input is parsed, converted to Negation Normal Form (NNF),
+and Skolemized before proof search.
+
+------------------------------------
+1. LOGICAL CONNECTIVES
+------------------------------------
+
+Negation:        ¬A
+Conjunction:     A ∧ B
+Disjunction:     A ∨ B
+
+Implication:     A → B      (allowed, eliminated internally)
+Biconditional:  A ↔ B      (allowed, eliminated internally)
+
+------------------------------------
+2. QUANTIFIERS
+------------------------------------
+
+Universal:       ∀x A
+Existential:     ∃x A
+
+Examples:
+  ∀x P(x)
+  ∀x ∃y R(x, y)
+
+------------------------------------
+3. TERMS
+------------------------------------
+
+Variables:
+  - Must start with a lowercase letter
+  - Examples: x, y, z, x1, foo
+
+Constants:
+  - Uppercase or system-generated
+  - Examples: A, E, SC0
+
+Functions:
+  - f(t1, ..., tn)
+  - Examples:
+      f(x)
+      mul(x, y)
+      inv(x)
+
+------------------------------------
+4. PREDICATES
+------------------------------------
+
+Predicates are identifiers applied to terms.
+
+Examples:
+  P(x)
+  Equal(x, y)
+  R(f(x), y)
+
+------------------------------------
+5. EQUALITY
+------------------------------------
+
+Equality is built-in and written as:
+
+  t1 = t2
+
+Examples:
+  x = y
+  mul(x, e) = x
+
+------------------------------------
+6. OPERATOR PRECEDENCE
+------------------------------------
+
+Highest to lowest:
+
+  ¬
+  ∀ ∃
+  ∧
+  ∨
+  →
+  ↔
+
+Parentheses may be used freely.
+
+------------------------------------
+7. SKOLEMIZATION BEHAVIOR
+------------------------------------
+
+Existential quantifiers are eliminated automatically.
+
+Examples:
+
+  ∃x P(x)
+    → P(SC0)
+
+  ∀x ∃y P(x, y)
+    → ∀x P(x, sf0(x))
+
+Shadowing is respected:
+
+  ∀x (P(x) ∨ ∃x Q(x))
+    → ∀x (P(x) ∨ Q(SC1))
+
+------------------------------------
+8. CURRENT LIMITATIONS
+------------------------------------
+
+- Universal quantifiers are retained after Skolemization
+- No proof search yet (tableaux coming next)
+- No arithmetic or theory reasoning beyond equality
+
+------------------------------------
+9. INTENDED USE
+------------------------------------
+
+This prover is designed for:
+- First-order logic
+- Algebraic theories (e.g. group theory)
+- Educational and experimental proof search
+
+------------------------------------
+END OF USER GUIDE
+------------------------------------
