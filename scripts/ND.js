@@ -67,21 +67,6 @@ for (let i = 0; i < proofState.length; i++) {
 }
 }
 
-// Helper - get all list of size k of combinations of elements of l
-function getCombos(k, l) {
-    if (k == 1) {
-        return l.map(x => [x]);
-    }
-    let combos = [];
-    for (let i = 0; i < l.length; i++) {
-        let rest = getCombos(k - 1, l.slice(0, i).concat(l.slice(i + 1))); // l.slice(0, i).concat(l.slice(i + 1)) or l.slice(i + 1)
-        for (let r of rest) {
-            combos.push([l[i], ...r]);
-        }
-    }
-    return combos;
-}
-
 function prove() {
     premisesAST = window.appData.premisesAST;
     goalAST = window.appData.conclusionsAST;
