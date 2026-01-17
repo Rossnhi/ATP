@@ -119,6 +119,12 @@ function unify(terms1, terms2, mapping) {
             if(subbedPair[0].equals(subbedPair[1])) {
                 continue;
             }
+            console.log(
+                "PAIR:",
+                subbedPair[0],
+                "≐",
+                subbedPair[1]
+            );
             if (subbedPair[0].type == "variable") {
                 if (occursCheck(subbedPair[0], subbedPair[1])) {
                     return false;
@@ -191,7 +197,7 @@ function substituteMapping(term, mapping) {
 }
 
 function occursCheck(variable, term) {
-    if(term.type == "constant") {
+    if (term.type == "constant") {
         return false;
     }
     if (term.type == "variable") {
@@ -200,7 +206,33 @@ function occursCheck(variable, term) {
     if (term.type == "function") {
         let occurs = false;
         for (let t of term.terms) {
-            if(occursCheck(variable, t)) {
+            if (occursCheck(variable, t)) {
+                occurs = true;
+                break;
+            }
+        }
+        return occurs;
+    }
+    throw new Error("Unrecognized term type in substituteMapping: " + term.type);
+}
+
+function occursCheck2(variable, term, mapping) {
+    if(term.type == "constant") {
+        return false;
+    }
+    if (term.type == "variable") {
+        if(term.equals(variable)) {
+            return true;
+        }
+        if (mapping[term.name]) {
+            return occursCheck(variable, mapping[term.name], mapping);
+        }
+        return false;
+    }
+    if (term.type == "function") {
+        let occurs = false;
+        for (let t of term.terms) {
+            if(occursCheck(variable, t, mapping)) {
                 occurs = true;
                 break;
             }
