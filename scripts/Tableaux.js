@@ -59,12 +59,7 @@ class Branch {
         return clone;
     }
 
-    tryClosing() {
-
-    }
-}
-
-function tryClosing(branch) {
+    tryClosing(branch) {
     if (branch.open) {
         let literalCombos = getCombos(2, branch.literals);
         for (let combo of literalCombos) {
@@ -91,7 +86,7 @@ function tryClosing(branch) {
                     unified = unify([negCore.left, negCore.right], [posCore.right, posCore.left], mapping);
                 }
             }
-            if(unified) {
+            if (unified) {
                 branch.subIndex = mapping;
                 branch.open = false;
                 return true;
@@ -99,6 +94,7 @@ function tryClosing(branch) {
         }
     }
     return false;
+}
 }
 
 // ensure idempotence
@@ -111,20 +107,14 @@ function tryClosing(branch) {
 // }
 
 function unify(terms1, terms2, mapping) {
-    if(terms1.length == terms2.length) {
+    if (terms1.length == terms2.length) {
         let worklist = terms1.map((term, index) => [term, terms2[index]]);
-        while(worklist.length > 0) {
+        while (worklist.length > 0) {
             let currentPair = worklist.pop();
             let subbedPair = currentPair.map(t => substituteMapping(t, mapping));
-            if(subbedPair[0].equals(subbedPair[1])) {
+            if (subbedPair[0].equals(subbedPair[1])) {
                 continue;
             }
-            console.log(
-                "PAIR:",
-                subbedPair[0],
-                "≐",
-                subbedPair[1]
-            );
             if (subbedPair[0].type == "variable") {
                 if (occursCheck(subbedPair[0], subbedPair[1])) {
                     return false;
@@ -134,10 +124,6 @@ function unify(terms1, terms2, mapping) {
                     mapping[binding] = substituteMapping(mapping[binding], { [subbedPair[0].name]: subbedPair[1] });
                 }
                 mapping[subbedPair[0].name] = subbedPair[1];
-                for (let pair of worklist) {
-                    pair[0] = substituteMapping(pair[0], mapping);
-                    pair[1] = substituteMapping(pair[1], mapping);
-                }
                 continue;
             }
             if (subbedPair[1].type == "variable") {
@@ -145,14 +131,68 @@ function unify(terms1, terms2, mapping) {
                     return false;
                 }
                 // propogate new binding through rhs of mapping and worklist
+                for (let binding of Object.keys(mapping)) {
+                    mapping[binding] = substituteMapping(mapping[binding], { [subbedPair[1].name]: subbedPair[0] });
+                }
+                mapping[subbedPair[1].name] = subbedPair[0];
+                continue;
+            }
+            if (subbedPair[0].type == "constant" && subbedPair[1].type == "constant") {
+                if (subbedPair[0].name != subbedPair[1].name) {
+                    return false;
+                }
+                continue;
+            }
+            if (subbedPair[0].type == "function" && subbedPair[1].type == "function") {
+                if (subbedPair[0].name != subbedPair[1].name) {
+                    return false;
+                }
+                if (subbedPair[0].arity != subbedPair[1].arity) {
+                    return false;
+                }
+                for (let i = 0; i < subbedPair[0].terms.length; i++) {
+                    worklist.push([subbedPair[0].terms[i], subbedPair[1].terms[i]]);
+                }
+                continue;
+            }
+            return false;
+        }
+        return true;
+    }
+    return false;
+}
+
+function unify2(terms1, terms2, mapping) {
+    if(terms1.length == terms2.length) {
+        let worklist = terms1.map((term, index) => [term, terms2[index]]);
+        while(worklist.length > 0) {
+            let currentPair = worklist.pop();
+            let subbedPair = currentPair.map(t => substituteMapping(t, mapping));
+            if(subbedPair[0].equals(subbedPair[1])) {
+                continue;
+            }
+            let newMapping = structuredClone(mapping);
+            newMapping[subbedPair[0].name] = subbedPair[1];
+            if (subbedPair[0].type == "variable") {
+                if (occursCheck2(subbedPair[0], subbedPair[1], newMapping)) {
+                    return false;
+                }
+                // propogate new binding through rhs of mapping and worklist
+                for (let binding of Object.keys(mapping)) {
+                    mapping[binding] = substituteMapping(mapping[binding], { [subbedPair[0].name]: subbedPair[1] });
+                }
+                mapping[subbedPair[0].name] = subbedPair[1];
+                continue;
+            }
+            if (subbedPair[1].type == "variable") {
+                if (occursCheck2(subbedPair[1], subbedPair[0], newMapping)) {
+                    return false;
+                }
+                // propogate new binding through rhs of mapping and worklist
                 for(let binding of Object.keys(mapping)) {
                     mapping[binding] = substituteMapping(mapping[binding], { [subbedPair[1].name]: subbedPair[0] });
                 }
                 mapping[subbedPair[1].name] = subbedPair[0];
-                for (let pair of worklist) {
-                    pair[0] = substituteMapping(pair[0], mapping);
-                    pair[1] = substituteMapping(pair[1], mapping);
-                }
                 continue;
             }
             if (subbedPair[0].type == "constant" && subbedPair[1].type == "constant") {
@@ -225,14 +265,14 @@ function occursCheck2(variable, term, mapping) {
             return true;
         }
         if (mapping[term.name]) {
-            return occursCheck(variable, mapping[term.name], mapping);
+            return occursCheck2(variable, mapping[term.name], mapping);
         }
         return false;
     }
     if (term.type == "function") {
         let occurs = false;
         for (let t of term.terms) {
-            if(occursCheck(variable, t, mapping)) {
+            if(occursCheck2(variable, t, mapping)) {
                 occurs = true;
                 break;
             }
