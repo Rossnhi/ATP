@@ -63,10 +63,9 @@ class Branch {
         if (branch.open) {
             let literalCombos = getCombos(2, branch.literals);
             for (let combo of literalCombos) {
-                let newSub = branch.subIndex.clone();
                 let negCore = undefined;
                 let posCore = undefined;
-                let unified = false;
+                let unified = null;
                 if (combo[0].literal.type == "not" && combo[1].literal.type != "not") {
                     negCore = combo[0].literal.expr;
                     posCore = combo[1].literal;
@@ -74,26 +73,26 @@ class Branch {
                     negCore = combo[1].literal.expr;
                     posCore = combo[0].literal;
                 }
+                // if (!negCore || !posCore) {
+                //     continue;
+                // }
                 if (negCore.type == "predicate" && posCore.type == "predicate") {
                     if (negCore.name == posCore.name) {
-                        unified = unify(negCore.terms, posCore.terms, newSub);
+                        unified = unify(negCore.terms, posCore.terms, branch.subIndex);
                     }
                 }
                 if (negCore.type == "equality" && posCore.type == "equality") {
-                    unified = unify([negCore.left, negCore.right], [posCore.left, posCore.right], newSub);
+                    unified = unify([negCore.left, negCore.right], [posCore.left, posCore.right], branch.subIndex);
                     if (!unified) {
-                        newSub = branch.subIndex.clone();
-                        unified = unify([negCore.left, negCore.right], [posCore.right, posCore.left], newSub);
+                        unified = unify([negCore.left, negCore.right], [posCore.right, posCore.left], branch.subIndex);
                     }
                 }
-                if (unified) {
-                    branch.subIndex = newSub;
-                    branch.open = false;
-                    return true;
+                if (unified != null) {
+                    return unified;
                 }
             }
         }
-        return false;
+        return null;
     }
 }
 
@@ -130,8 +129,7 @@ class Substitution {
                 newMapping[binding] = this.apply(newMapping[binding]);
             }
         }
-        this.mapping = newMapping;
-        return true;
+        return new Substitution(newMapping);
     }
 
     clone() {
@@ -154,47 +152,50 @@ class Substitution {
 function unify(terms1, terms2, substitution) {
     if (terms1.length == terms2.length) {
         let worklist = terms1.map((term, index) => [term, terms2[index]]);
+        let newSub = substitution.clone();
         while (worklist.length > 0) {
             let currentPair = worklist.pop();
-            let subbedPair = currentPair.map(t => substitution.apply(t));
+            let subbedPair = currentPair.map(t => newSub.apply(t));
             if (subbedPair[0].equals(subbedPair[1])) {
                 continue;
             }
             if (subbedPair[0].type == "variable") {
-                if (!substitution.extend(subbedPair[0], subbedPair[1])) {
-                    return false;
+                newSub = newSub.extend(subbedPair[0], subbedPair[1]);
+                if (!newSub) {
+                    return null;
                 }
                 continue;
             }
             if (subbedPair[1].type == "variable") {
-                if (!substitution.extend(subbedPair[1], subbedPair[0])) {
-                    return false;
+                newSub = newSub.extend(subbedPair[1], subbedPair[0]);
+                if (!newSub) {
+                    return null;
                 }
                 continue;
             }
             if (subbedPair[0].type == "constant" && subbedPair[1].type == "constant") {
                 if (subbedPair[0].name != subbedPair[1].name) {
-                    return false;
+                    return null;
                 }
                 continue;
             }
             if (subbedPair[0].type == "function" && subbedPair[1].type == "function") {
                 if (subbedPair[0].name != subbedPair[1].name) {
-                    return false;
+                    return null;
                 }
                 if (subbedPair[0].arity != subbedPair[1].arity) {
-                    return false;
+                    return null;
                 }
                 for (let i = 0; i < subbedPair[0].terms.length; i++) {
                     worklist.push([subbedPair[0].terms[i], subbedPair[1].terms[i]]);
                 }
                 continue;
             }
-            return false;
+            return null;
         }
-        return true;
+        return newSub;
     }
-    return false;
+    return null;
 }
 
 function occursCheck(variable, term) {

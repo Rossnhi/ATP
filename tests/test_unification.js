@@ -23,24 +23,43 @@ function getTerm(formulaStr, which = "first") {
 /*
  Unification test harness
 */
-function unifyTest(name, lhsTerms, rhsTerms, expectedSuccess, expectedMapping = {}) {
+function unifyTest(name, lhsTerms, rhsTerms, expectedSuccess) {
     try {
-        const mapping = new Substitution();
+        const sigma0 = new Substitution();
 
-        const success = unify(lhsTerms, rhsTerms, mapping);
+        const result = unify(lhsTerms, rhsTerms, sigma0);
 
-        if (success !== expectedSuccess) {
-            console.error("❌ UNIFY FAILED:", name);
-            console.error("  Expected success:", expectedSuccess);
-            console.error("  Got success:     ", success);
+        // Check success / failure
+        if (expectedSuccess) {
+            if (result === null) {
+                console.error("❌ UNIFY FAILED:", name);
+                console.error("  Expected success: true");
+                console.error("  Got: null");
+                return;
+            }
+        } else {
+            if (result !== null) {
+                console.error("❌ UNIFY FAILED:", name);
+                console.error("  Expected success: false");
+                console.error("  Got:", result);
+                return;
+            }
+            console.log("✅ UNIFY OK:", name);
             return;
         }
 
-        if (success && !mapping.equals(new Substitution(expectedMapping))) {
-            console.error("❌ WRONG SUBSTITUTION:", name);
-            console.error("  Expected mapping:", expectedMapping);
-            console.error("  Got mapping:     ", mapping);
-            return;
+        // Semantic correctness check:
+        // result must make lhsTerms[i] == rhsTerms[i]
+        for (let i = 0; i < lhsTerms.length; i++) {
+            const l = result.apply(lhsTerms[i]);
+            const r = result.apply(rhsTerms[i]);
+            if (!l.equals(r)) {
+                console.error("❌ WRONG SUBSTITUTION:", name);
+                console.error("  After substitution:");
+                console.error("  LHS:", l);
+                console.error("  RHS:", r);
+                return;
+            }
         }
 
         console.log("✅ UNIFY OK:", name);
@@ -49,6 +68,7 @@ function unifyTest(name, lhsTerms, rhsTerms, expectedSuccess, expectedMapping = 
         console.error(e.message);
     }
 }
+
 
 /* =====================================
    CONSTANT / VARIABLE BASICS
