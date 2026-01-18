@@ -21,26 +21,11 @@ function getTerm(formulaStr, which = "first") {
 }
 
 /*
- Compare two mappings structurally
-*/
-function mappingEquals(m1, m2) {
-    const k1 = Object.keys(m1);
-    const k2 = Object.keys(m2);
-    if (k1.length !== k2.length) return false;
-
-    for (let k of k1) {
-        if (!(k in m2)) return false;
-        if (!m1[k].equals(m2[k])) return false;
-    }
-    return true;
-}
-
-/*
  Unification test harness
 */
 function unifyTest(name, lhsTerms, rhsTerms, expectedSuccess, expectedMapping = {}) {
     try {
-        const mapping = {};
+        const mapping = new Substitution();
 
         const success = unify(lhsTerms, rhsTerms, mapping);
 
@@ -51,7 +36,7 @@ function unifyTest(name, lhsTerms, rhsTerms, expectedSuccess, expectedMapping = 
             return;
         }
 
-        if (success && !mappingEquals(mapping, expectedMapping)) {
+        if (success && !mapping.equals(new Substitution(expectedMapping))) {
             console.error("❌ WRONG SUBSTITUTION:", name);
             console.error("  Expected mapping:", expectedMapping);
             console.error("  Got mapping:     ", mapping);
@@ -195,14 +180,14 @@ unifyTest(
    ===================================== */
 
 (function () {
-    const mapping = {};
+    const mapping = new Substitution();
     const success = unify(
         [getTerm("P(x)")],
         [getTerm("P(f(x))")],
         mapping
     );
 
-    if (success || Object.keys(mapping).length !== 0) {
+    if (success || Object.keys(mapping.mapping).length !== 0) {
         console.error("❌ MAPPING MUTATED ON FAILURE");
     } else {
         console.log("✅ NO MUTATION ON FAILURE");
@@ -373,7 +358,7 @@ unifyTest(
     [getTerm("P(f(y,z))")],
     true,
     {
-        x: getTerm("P(y)"),
+        x: getTerm("P(z)"),
         z: getTerm("P(y)")
     }
 );

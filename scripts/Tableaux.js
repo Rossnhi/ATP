@@ -4,7 +4,7 @@ class Branch {
         this.parent = parent;
         this.literals = [];
         this.formulasIndex = [];
-        this.subIndex = {};
+        this.subIndex = new Substitution();
         this.open = true;
     }
 
@@ -54,87 +54,122 @@ class Branch {
                 expansionInfo: f.expansionInfo
             };
         });
-        clone.subIndex = structuredClone(this.subIndex);
+        clone.subIndex = this.subIndex.clone();
         clone.open = this.open;
         return clone;
     }
 
     tryClosing(branch) {
-    if (branch.open) {
-        let literalCombos = getCombos(2, branch.literals);
-        for (let combo of literalCombos) {
-            let mapping = { ...branch.subIndex };
-            let negCore = undefined;
-            let posCore = undefined;
-            let unified = false;
-            if (combo[0].literal.type == "not" && combo[1].literal.type != "not") {
-                negCore = combo[0].literal.expr;
-                posCore = combo[1].literal;
-            } else if (combo[0].literal.type != "not" && combo[1].literal.type == "not") {
-                negCore = combo[1].literal.expr;
-                posCore = combo[0].literal;
-            }
-            if (negCore.type == "predicate" && posCore.type == "predicate") {
-                if (negCore.name == posCore.name) {
-                    unified = unify(negCore.terms, posCore.terms, mapping);
+        if (branch.open) {
+            let literalCombos = getCombos(2, branch.literals);
+            for (let combo of literalCombos) {
+                let newSub = branch.subIndex.clone();
+                let negCore = undefined;
+                let posCore = undefined;
+                let unified = false;
+                if (combo[0].literal.type == "not" && combo[1].literal.type != "not") {
+                    negCore = combo[0].literal.expr;
+                    posCore = combo[1].literal;
+                } else if (combo[0].literal.type != "not" && combo[1].literal.type == "not") {
+                    negCore = combo[1].literal.expr;
+                    posCore = combo[0].literal;
                 }
-            }
-            if (negCore.type == "equality" && posCore.type == "equality") {
-                unified = unify([negCore.left, negCore.right], [posCore.left, posCore.right], mapping);
-                if (!unified) {
-                    mapping = { ...branch.subIndex };
-                    unified = unify([negCore.left, negCore.right], [posCore.right, posCore.left], mapping);
+                if (negCore.type == "predicate" && posCore.type == "predicate") {
+                    if (negCore.name == posCore.name) {
+                        unified = unify(negCore.terms, posCore.terms, newSub);
+                    }
                 }
-            }
-            if (unified) {
-                branch.subIndex = mapping;
-                branch.open = false;
-                return true;
+                if (negCore.type == "equality" && posCore.type == "equality") {
+                    unified = unify([negCore.left, negCore.right], [posCore.left, posCore.right], newSub);
+                    if (!unified) {
+                        newSub = branch.subIndex.clone();
+                        unified = unify([negCore.left, negCore.right], [posCore.right, posCore.left], newSub);
+                    }
+                }
+                if (unified) {
+                    branch.subIndex = newSub;
+                    branch.open = false;
+                    return true;
+                }
             }
         }
+        return false;
     }
-    return false;
-}
 }
 
-// ensure idempotence
-// let normalisedMapping = {};
-// for (let binding of Object.keys(mapping)) {
-//     normalisedMapping[binding] = substituteMapping(mapping[binding], mapping);
-// }
-// if (!mappingEquals(normalisedMapping, mapping)) {
-//     return false;
-// }
+class Substitution {
+    constructor(mapping = {}) {
+        this.mapping = mapping;
+    }
 
-function unify(terms1, terms2, mapping) {
+    apply(term) {
+        if (term.type == "constant") {
+            return term.clone();
+        }
+        if (term.type == "variable") {
+            if (term.name in this.mapping) {
+                return this.apply(this.mapping[term.name], this.mapping);
+            }
+            return term.clone()
+        }
+        if (term.type == "function") {
+            return new Func(term.name, term.terms.map(t => this.apply(t)));
+        }
+        throw new Error("Unrecognized term type in substitution.apply(): " + term.type);
+    }
+
+    extend(variable, term) {
+        let newMapping = { ...this.mapping };
+        term = this.apply(term);
+        if (occursCheck(variable, term)) {
+            return null;
+        }
+        newMapping[variable.name] = term;
+        for (let binding of Object.keys(newMapping)) {
+            if (binding != variable.name) {
+                newMapping[binding] = this.apply(newMapping[binding]);
+            }
+        }
+        this.mapping = newMapping;
+        return true;
+    }
+
+    clone() {
+        return new Substitution({ ...this.mapping });
+    }
+
+    equals(other) {
+        const k1 = Object.keys(this.mapping)
+        const k2 = Object.keys(other.mapping);
+        if (k1.length !== k2.length) return false;
+
+        for (let k of k1) {
+            if (!(k in other.mapping)) return false;
+            if (!this.mapping[k].equals(other.mapping[k])) return false;
+        }
+        return true;
+    }
+}
+
+function unify(terms1, terms2, substitution) {
     if (terms1.length == terms2.length) {
         let worklist = terms1.map((term, index) => [term, terms2[index]]);
         while (worklist.length > 0) {
             let currentPair = worklist.pop();
-            let subbedPair = currentPair.map(t => substituteMapping(t, mapping));
+            let subbedPair = currentPair.map(t => substitution.apply(t));
             if (subbedPair[0].equals(subbedPair[1])) {
                 continue;
             }
             if (subbedPair[0].type == "variable") {
-                if (occursCheck(subbedPair[0], subbedPair[1])) {
+                if (!substitution.extend(subbedPair[0], subbedPair[1])) {
                     return false;
                 }
-                // propogate new binding through rhs of mapping and worklist
-                for (let binding of Object.keys(mapping)) {
-                    mapping[binding] = substituteMapping(mapping[binding], { [subbedPair[0].name]: subbedPair[1] });
-                }
-                mapping[subbedPair[0].name] = subbedPair[1];
                 continue;
             }
             if (subbedPair[1].type == "variable") {
-                if (occursCheck(subbedPair[1], subbedPair[0])) {
+                if (!substitution.extend(subbedPair[1], subbedPair[0])) {
                     return false;
                 }
-                // propogate new binding through rhs of mapping and worklist
-                for (let binding of Object.keys(mapping)) {
-                    mapping[binding] = substituteMapping(mapping[binding], { [subbedPair[1].name]: subbedPair[0] });
-                }
-                mapping[subbedPair[1].name] = subbedPair[0];
                 continue;
             }
             if (subbedPair[0].type == "constant" && subbedPair[1].type == "constant") {
@@ -160,80 +195,6 @@ function unify(terms1, terms2, mapping) {
         return true;
     }
     return false;
-}
-
-function unify2(terms1, terms2, mapping) {
-    if(terms1.length == terms2.length) {
-        let worklist = terms1.map((term, index) => [term, terms2[index]]);
-        while(worklist.length > 0) {
-            let currentPair = worklist.pop();
-            let subbedPair = currentPair.map(t => substituteMapping(t, mapping));
-            if(subbedPair[0].equals(subbedPair[1])) {
-                continue;
-            }
-            let newMapping = structuredClone(mapping);
-            newMapping[subbedPair[0].name] = subbedPair[1];
-            if (subbedPair[0].type == "variable") {
-                if (occursCheck2(subbedPair[0], subbedPair[1], newMapping)) {
-                    return false;
-                }
-                // propogate new binding through rhs of mapping and worklist
-                for (let binding of Object.keys(mapping)) {
-                    mapping[binding] = substituteMapping(mapping[binding], { [subbedPair[0].name]: subbedPair[1] });
-                }
-                mapping[subbedPair[0].name] = subbedPair[1];
-                continue;
-            }
-            if (subbedPair[1].type == "variable") {
-                if (occursCheck2(subbedPair[1], subbedPair[0], newMapping)) {
-                    return false;
-                }
-                // propogate new binding through rhs of mapping and worklist
-                for(let binding of Object.keys(mapping)) {
-                    mapping[binding] = substituteMapping(mapping[binding], { [subbedPair[1].name]: subbedPair[0] });
-                }
-                mapping[subbedPair[1].name] = subbedPair[0];
-                continue;
-            }
-            if (subbedPair[0].type == "constant" && subbedPair[1].type == "constant") {
-                if (subbedPair[0].name != subbedPair[1].name) {
-                    return false;
-                }
-                continue;
-            }
-            if (subbedPair[0].type == "function" && subbedPair[1].type == "function") {
-                if (subbedPair[0].name != subbedPair[1].name) {
-                    return false;
-                }
-                if (subbedPair[0].arity != subbedPair[1].arity) {
-                    return false;
-                }
-                for (let i = 0; i < subbedPair[0].terms.length; i++) {
-                    worklist.push([subbedPair[0].terms[i], subbedPair[1].terms[i]]);
-                }
-                continue;
-            }
-            return false;
-        }
-        return true;
-    }
-    return false;
-}
-
-function substituteMapping(term, mapping) {
-    if (term.type == "constant") {
-        return term.clone();
-    }
-    if (term.type == "variable") {
-        if(term.name in mapping) {
-            return substituteMapping(mapping[term.name], mapping);
-        }
-        return term.clone()
-    }
-    if (term.type == "function") {
-        return new Func(term.name, term.terms.map(t => substituteMapping(t, mapping)));
-    }
-    throw new Error("Unrecognized term type in substituteMapping: " + term.type);
 }
 
 function occursCheck(variable, term) {
@@ -253,33 +214,7 @@ function occursCheck(variable, term) {
         }
         return occurs;
     }
-    throw new Error("Unrecognized term type in substituteMapping: " + term.type);
-}
-
-function occursCheck2(variable, term, mapping) {
-    if(term.type == "constant") {
-        return false;
-    }
-    if (term.type == "variable") {
-        if(term.equals(variable)) {
-            return true;
-        }
-        if (mapping[term.name]) {
-            return occursCheck2(variable, mapping[term.name], mapping);
-        }
-        return false;
-    }
-    if (term.type == "function") {
-        let occurs = false;
-        for (let t of term.terms) {
-            if(occursCheck2(variable, t, mapping)) {
-                occurs = true;
-                break;
-            }
-        }
-        return occurs;
-    }
-    throw new Error("Unrecognized term type in substituteMapping: " + term.type);
+    throw new Error("Unrecognized term type in occursCheck: " + term.type);
 }
 
 function classify(formula) {
@@ -300,7 +235,6 @@ function classify(formula) {
     }
 }
 
-
 // Helper - get all list of size k of combinations of elements of l
 function getCombos(k, l) {
     if (k == 1) {
@@ -314,17 +248,4 @@ function getCombos(k, l) {
         }
     }
     return combos;
-}
-
-// Helper - check if two mapping objects are same
-function mappingEquals(m1, m2) {
-    const k1 = Object.keys(m1);
-    const k2 = Object.keys(m2);
-    if (k1.length !== k2.length) return false;
-
-    for (let k of k1) {
-        if (!(k in m2)) return false;
-        if (!m1[k].equals(m2[k])) return false;
-    }
-    return true;
 }
