@@ -80,9 +80,15 @@ function substituteFormula(toSub, subWith, formula) {
     throw new Error("Incorrect formula node");
 }
 
+// reset before start of every proof
 let activeUniversals = [];
 let skolemCounterConst = 0;
 let skolemCounterFunc = 0;
+
+function resetSkolemCounters() {
+    skolemCounterConst = 0;
+    skolemCounterFunc = 0;
+}
 
 // required to check if variables are shadowed be same name variables
 function active(v) {
@@ -91,7 +97,7 @@ function active(v) {
             return true;
         }
     }
-    false;
+    return false;
 }
 
 function skolemize(formula) {
@@ -147,4 +153,8 @@ function dropForall(formula) {
     } else {
         throw new Error("dropForall: unsupported formula type " + formula.type);
     }
+}
+
+function preprocess(ast) {
+    return(dropForall(skolemize(toNNF(ast))));
 }

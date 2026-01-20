@@ -1,0 +1,6 @@
+0. Make AST to string for FOL
+1. Make it multi-sorted FOL to reason about multiple proofs
+2. Add import/exportable knowledge base
+3. Add color coding for input
+4. Didactic proofs
+5. Proof tree display
