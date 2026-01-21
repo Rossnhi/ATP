@@ -36,6 +36,41 @@ function pushNegation(formula) {
     }
 }
 
+// alpha renaming
+let alphaCounter = 0;
+
+function freshVariable() {
+    return new Variable(`v${alphaCounter++}`);
+}
+function alphaRename(formula) {
+    if (formula.type === "predicate" || formula.type === "equality") {
+        return formula;
+    }
+
+    if (formula.type === "forall" || formula.type === "exists") {
+        const fresh = freshVariable();
+        const renamedScope =
+            substituteFormula(formula.variable.name, fresh, formula.scope);
+        return new formula.constructor(fresh, alphaRename(renamedScope));
+    }
+
+    if (formula.type === "not") {
+        return new Not(alphaRename(formula.expr));
+    }
+
+    if (formula.type === "and") {
+        return new And(alphaRename(formula.left), alphaRename(formula.right));
+    }
+
+    if (formula.type === "or") {
+        return new Or(alphaRename(formula.left), alphaRename(formula.right));
+    }
+
+    throw new Error("Unknown formula type in alphaRename");
+}
+
+
+
 // Skolemization
 // toSub is a string representing the name of the variable, subWith is a term
 function substituteTerm(toSub, subWith, term) {
@@ -156,5 +191,5 @@ function dropForall(formula) {
 }
 
 function preprocess(ast) {
-    return(dropForall(skolemize(toNNF(ast))));
+    return(dropForall(skolemize(alphaRename(toNNF(ast)))));
 }

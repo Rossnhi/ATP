@@ -15,6 +15,7 @@ function tableauTest(name, input, expectedUnsat) {
 
         if (result === expectedUnsat) {
             console.log("✅ PASSED:", name);
+            return engine;
         } else {
             console.error("❌ FAILED:", name);
             console.error("   Formula:", input);
@@ -569,9 +570,75 @@ tableauTest(
 
 tableauTest(
     "All philosophers are mortal + Socrates is a philosopher + Socrates is not mortal",
-    "∀x (Philosopher(x) ⟹ Mortal(x)) ∧ Philosopher(socrates) ∧ ¬Mortal(socrates)",
+    "∀x (Philosopher(x) ⟹ Mortal(x)) ∧ Philosopher(SOCRATES) ∧ ¬Mortal(SOCRATES)",
     true  // UNSAT: contradiction
 );
+
+
+//Group Theory
+
+tableauTest(
+    "Group identity uniqueness",
+    "∀x ∀y ∀z (*(*(x,y),z) = *(x,*(y,z))) ∧ \
+     ∀x (*(E1,x) = x ∧ *(x,E1) = x) ∧ \
+     ∀x (*(inv(x),x) = E1 ∧ *(x,inv(x))) ∧ \
+     ∀x (*(E2,x) = x) ∧ \
+     ¬(E1 = E2)",
+    true
+);
+
+let t = tableauTest(
+    "Group inverse uniqueness",
+    "∀x ∀y ∀z (*(*(x,y),z) = *(x,*(y,z))) ∧ \
+     ∀x (*(E,x) = x) ∧ \
+     ∀x (*(inv(x),x) = E) ∧ \
+     *(x,y) = E ∧ \
+     *(x,z) = E ∧ \
+     ¬(y = z)",
+    true
+);
+console.log(t.branches);
+
+tableauTest(
+    "Middle cancellation implies abelian",
+    "∀x ∀y ∀z (*(*(x,y),z) = *(x,*(y,z))) ∧ \
+     ∀x (*(E,x) = x) ∧ \
+     ∀x (*(inv(x),x) = E) ∧ \
+     ∀a ∀b ∀c ∀d ∀x ( *(*(a,x),b) = *(*(c,x),d) ⟹ *(a,b) = *(c,d) ) ∧ \
+     ¬(∀x ∀y (*(x,y) = *(y,x)))",
+    true
+);
+
+
+tableauTest(
+    "Group axioms do not imply commutativity",
+    "∀x ∀y ∀z (*(*(x,y),z) = *(x,*(y,z))) ∧ \
+     ∀x (*(E,x) = x) ∧ \
+     ∀x (*(inv(x),x) = E) ∧ \
+     ¬(∀x ∀y (*(x,y) = *(y,x)))",
+    false
+);
+
+tableauTest(
+    "Group axioms do not imply middle cancellation",
+    "∀x ∀y ∀z (*(*(x,y),z) = *(x,*(y,z))) ∧ \
+     ∀x (*(E,x) = x) ∧ \
+     ∀x (*(inv(x),x) = E) ∧ \
+     ¬(∀a ∀b ∀c ∀d ∀x ( *(*(a,x),b) = *(*(c,x),d) ⟹ *(a,b) = *(c,d) ))",
+    false   // SAT expected
+);
+
+tableauTest(
+    "Group axioms + left cancellation do not imply commutativity",
+    "∀x ∀y ∀z (*(*(x,y),z) = *(x,*(y,z))) ∧ \
+   ∀x (*(E,x) = x) ∧ \
+   ∀x (*(inv(x),x) = E) ∧ \
+   ∀x ∀y ∀z (*(x,y) = *(x,z) ⟹ y = z) ∧ \
+   ¬(∀x ∀y (*(x,y) = *(y,x)))",
+    false
+);
+
+
 
 /* =========================================
    END OF EXTENDED TESTS

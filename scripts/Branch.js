@@ -9,7 +9,7 @@ class Substitution {
         }
         if (term.type == "variable") {
             if (term.name in this.mapping) {
-                return this.apply(this.mapping[term.name], this.mapping);
+                return this.apply(this.mapping[term.name]);
             }
             return term.clone()
         }
@@ -58,6 +58,7 @@ class Branch {
         this.literals = [];
         this.formulasIndex = [];
         this.subIndex = new Substitution();
+        this.unifier = null;
         this.open = true;
     }
 
@@ -71,21 +72,21 @@ class Branch {
             expansionInfo: expansion
         }
         if (expansion.kind == "literal") {
-            if (formula.type === "equality") {
-                if (formula.left.type === "variable") {
-                    let extended = this.subIndex.extend(formula.left, formula.right);
-                    if(extended == null) {
-                        return false;
-                    }
-                    this.subIndex = extended;
-                } else if (formula.right.type === "variable") {
-                    let extended = this.subIndex.extend(formula.right, formula.left);
-                    if (extended == null) {
-                        return false
-                    }
-                    this.subIndex = extended;
-                }
-            }
+            // if (formula.type === "equality") {
+            //     if (formula.left.type === "variable") {
+            //         let extended = this.subIndex.extend(formula.left, formula.right);
+            //         if(extended == null) {
+            //             return false;
+            //         }
+            //         this.subIndex = extended;
+            //     } else if (formula.right.type === "variable") {
+            //         let extended = this.subIndex.extend(formula.right, formula.left);
+            //         if (extended == null) {
+            //             return false
+            //         }
+            //         this.subIndex = extended;
+            //     }
+            // }
             this.literals.push({ literal: formula, id: formulaData.id});
             formulaData.expanded = true;
         }
@@ -127,6 +128,7 @@ class Branch {
         });
         clone.subIndex = this.subIndex.clone();
         clone.open = this.open;
+        clone.unifier = this.unifier != null? this.unifier.clone() : null;
         return clone;
     }
 
@@ -136,7 +138,7 @@ class Branch {
             for (let combo of literalCombos) {
                 let negCore = undefined;
                 let posCore = undefined;
-                let unified = null;
+                let unifier = null;
                 if (combo[0].literal.type == "not" && combo[1].literal.type != "not") {
                     negCore = combo[0].literal.expr;
                     posCore = combo[1].literal;
@@ -149,17 +151,17 @@ class Branch {
                 // }
                 if (negCore && negCore.type == "predicate" && posCore.type == "predicate") {
                     if (negCore.name == posCore.name) {
-                        unified = unify(negCore.terms, posCore.terms, this.subIndex);
+                        unifier = unify(negCore.terms, posCore.terms, this.subIndex);
                     }
                 }
                 if (negCore && negCore.type == "equality" && posCore.type == "equality") {
-                    unified = unify([negCore.left, negCore.right], [posCore.left, posCore.right], this.subIndex);
-                    if (!unified) {
-                        unified = unify([negCore.left, negCore.right], [posCore.right, posCore.left], this.subIndex);
+                    unifier = unify([negCore.left, negCore.right], [posCore.left, posCore.right], this.subIndex);
+                    if (unifier == null) {
+                        unifier = unify([negCore.left, negCore.right], [posCore.right, posCore.left], this.subIndex);
                     }
                 }
-                if (unified != null) {
-                    return unified;
+                if (unifier != null) {
+                    return unifier;
                 }
             }
         }
@@ -182,6 +184,7 @@ function unify(terms1, terms2, substitution) {
     if (terms1.length == terms2.length) {
         let worklist = terms1.map((term, index) => [term, terms2[index]]);
         let newSub = substitution.clone();
+        let unifier = new Substitution();
         while (worklist.length > 0) {
             let currentPair = worklist.pop();
             let subbedPair = currentPair.map(t => newSub.apply(t));
@@ -189,17 +192,19 @@ function unify(terms1, terms2, substitution) {
                 continue;
             }
             if (subbedPair[0].type == "variable") {
-                newSub = newSub.extend(subbedPair[0], subbedPair[1]);
-                if (!newSub) {
-                    return null;
-                }
+                let ns = newSub.extend(subbedPair[0], subbedPair[1]);
+                let us = unifier.extend(subbedPair[0], subbedPair[1]);
+                if (!ns || !us) return null;
+                newSub = ns;
+                unifier = us;
                 continue;
             }
             if (subbedPair[1].type == "variable") {
-                newSub = newSub.extend(subbedPair[1], subbedPair[0]);
-                if (!newSub) {
-                    return null;
-                }
+                let ns = newSub.extend(subbedPair[1], subbedPair[0]);
+                let us = unifier.extend(subbedPair[1], subbedPair[0]);
+                if (!ns || !us) return null;
+                newSub = ns;
+                unifier = us;
                 continue;
             }
             if (subbedPair[0].type == "constant" && subbedPair[1].type == "constant") {
@@ -222,7 +227,7 @@ function unify(terms1, terms2, substitution) {
             }
             return null;
         }
-        return newSub;
+        return unifier;
     }
     return null;
 }

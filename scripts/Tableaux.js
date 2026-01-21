@@ -8,6 +8,7 @@ class Tableau {
 
     initialize(formulas) {
         resetSkolemCounters();
+        alphaCounter = 0;
         let rootBranch = new Branch(this.nextBranchId, null);
         this.nextBranchId++;
         this.branches[rootBranch.id] = rootBranch;
@@ -16,9 +17,9 @@ class Tableau {
             rootBranch.add(formula, "Premise")
         }
         this.agenda.push(this.rootId);
-        this.branches[this.rootId] = rootBranch;
     }
 
+    // returns true if all branches are closed - if every branch leads to a contradiction, if what we are trying to prove is false
     run() {
         while (this.agenda.length > 0) {
             let branch = this.branches[this.pickBranch()];
@@ -27,11 +28,11 @@ class Tableau {
                 continue;
             }
 
-            let contradictionSub = branch.tryClosing();
-            if(contradictionSub != null) {
+            let unifier = branch.tryClosing();
+            if(unifier != null) {
                 let newBranch = branch.clone(this.nextBranchId, branch.id);
-                newBranch.subIndex = contradictionSub;
                 newBranch.open = false;
+                newBranch.unifier = unifier;
                 this.branches[newBranch.id] = newBranch;
                 this.nextBranchId++;
                 continue;
